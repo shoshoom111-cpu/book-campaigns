@@ -1,0 +1,649 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>حاسبة حملات الكتب</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Readex+Pro:wght@500;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600&display=swap">
+<style>[hidden]{display:none!important}img{max-width:100%}body{margin:0}</style>
+<style>
+/* Layout: tabbed work area (campaign, marketers, agreements, settings) beside a sticky quote slip; stacks on phones with a fixed total bar */
+:root{
+  --bg:#F3F5F7; --surface:#FFFFFF; --ink:#16233A; --muted:#5B677A; --line:#DCE2EA;
+  --accent:#0F7B6C; --accent-soft:#E2F2EF; --gold:#B7791F; --danger:#B42318;
+  --display:"Readex Pro","IBM Plex Sans Arabic",system-ui,sans-serif;
+  --body:"IBM Plex Sans Arabic",system-ui,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0E141D; --surface:#17202D; --ink:#E8EDF3; --muted:#9AA6B6; --line:#2A3544;
+  --accent:#3CC4AE; --accent-soft:#16332F; --gold:#E0A84A; --danger:#F97066; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0E141D; --surface:#17202D; --ink:#E8EDF3; --muted:#9AA6B6; --line:#2A3544;
+  --accent:#3CC4AE; --accent-soft:#16332F; --gold:#E0A84A; --danger:#F97066; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.6}
+.wrap{max-width:1180px;margin:0 auto;padding-block:28px 120px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0}
+h1{font-size:clamp(24px,4vw,34px)}
+h3{font-size:16px}
+.lede{color:var(--muted);margin:6px 0 0;max-width:62ch}
+.maintabs{display:flex;flex-wrap:nowrap;gap:2px;margin-top:20px;border-bottom:1px solid var(--line);overflow-x:auto;scrollbar-width:none}
+.maintabs::-webkit-scrollbar{display:none}
+.unit{display:flex;align-items:center;gap:6px}
+.pin{width:72px;padding:5px 6px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);font:600 14px var(--body);text-align:center;font-variant-numeric:tabular-nums}
+.k-sv{background:color-mix(in srgb,var(--muted) 45%,var(--line))}
+.maintabs button{font:600 15px var(--body);border:0;background:none;color:var(--muted);padding:10px 12px;cursor:pointer;border-bottom:3px solid transparent;white-space:nowrap;flex:none}
+.warn{background:color-mix(in srgb,var(--gold) 14%,transparent);color:var(--ink);border-radius:10px;padding:10px 12px;font-size:13px}
+@media (max-width:600px){
+  .tbl.cards thead{display:none}
+  .tbl.cards,.tbl.cards tbody{display:block}
+  .tbl.cards tr{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:12px 0;border-bottom:1px solid var(--line)}
+  .tbl.cards td{border:0;padding:0;min-width:0}
+  .tbl.cards td[data-l]::before{content:attr(data-l);display:block;font-size:12px;color:var(--muted);margin-bottom:2px}
+  .tbl.cards td:empty{display:none}
+}
+.maintabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+.grid{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:24px;margin-top:20px;align-items:start}
+@media (max-width:900px){.grid{grid-template-columns:1fr}}
+section,.panel{min-width:0}
+.seg{display:flex;gap:6px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:4px;width:fit-content}
+.seg button{font:600 15px var(--body);border:0;background:none;color:var(--muted);padding:8px 18px;border-radius:9px;cursor:pointer}
+.seg button[aria-selected="true"]{background:var(--ink);color:var(--surface)}
+.label{font-size:12px;letter-spacing:.04em;color:var(--muted);font-weight:600;margin:22px 0 10px}
+.presets{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px}
+.preset{text-align:right;font:inherit;color:inherit;background:var(--surface);border:1.5px solid var(--line);border-radius:12px;padding:12px 14px;cursor:pointer;display:flex;flex-direction:column;gap:4px}
+.preset:hover{border-color:var(--accent)}
+.preset[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
+.preset b{font-family:var(--display);font-size:16px}
+.preset small{color:var(--muted);font-size:13px;line-height:1.45}
+.preset .from{font-size:13px;color:var(--accent);font-weight:600;font-variant-numeric:tabular-nums}
+.star{color:var(--gold);font-size:12px;font-weight:600}
+.items{background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.item{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:12px;align-items:center;padding:11px 14px;border-top:1px solid var(--line)}
+.item:first-child{border-top:0}
+.item.off .nm{color:var(--muted)}
+.nm{font-weight:600;min-width:0;overflow-wrap:anywhere}
+.nm small{display:block;font-weight:400;color:var(--muted);font-size:12.5px}
+.unit{font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+.step{display:flex;align-items:center;border:1px solid var(--line);border-radius:9px;overflow:hidden}
+.step button{width:32px;height:32px;border:0;background:var(--bg);color:var(--ink);font-size:18px;cursor:pointer}
+.step input{width:44px;height:32px;border:0;text-align:center;background:var(--surface);color:var(--ink);font:600 15px var(--body);font-variant-numeric:tabular-nums;-moz-appearance:textfield}
+.step input::-webkit-inner-spin-button{-webkit-appearance:none}
+@media (max-width:480px){.item{grid-template-columns:minmax(0,1fr) auto}.item>.unit,.units{grid-column:1;grid-row:2;margin-top:-6px}.units{align-items:flex-start}.step{grid-row:1/3;grid-column:2}}
+.units{display:flex;flex-direction:column;gap:4px;align-items:flex-end}
+.units .ds{color:var(--gold)}
+.row{display:flex;flex-wrap:wrap;gap:12px;align-items:end}
+.field{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted);min-width:0}
+.field input,.field select,.field textarea{width:140px;max-width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:9px;background:var(--surface);color:var(--ink);font:500 15px var(--body);font-variant-numeric:tabular-nums}
+.field.wide input,.field.wide textarea{width:100%}
+.form{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px}
+.form .field input,.form .field select{width:100%}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:12px;margin-bottom:14px}
+.note{font-size:12.5px;color:var(--muted);margin:0}
+.btn{font:600 15px var(--body);border:0;border-radius:10px;padding:10px 16px;background:var(--ink);color:var(--surface);cursor:pointer}
+.btn.ghost{background:none;color:var(--ink);border:1px solid var(--line)}
+.btn.small{padding:6px 12px;font-size:14px}
+.x{border:0;background:none;color:var(--danger);font:600 14px var(--body);cursor:pointer;padding:4px 8px}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+textarea.out{width:100%;min-height:320px;font:14px/1.7 var(--body);border:1px solid var(--line);border-radius:10px;padding:12px;background:var(--bg);color:var(--ink);white-space:pre-wrap}
+.slip{position:sticky;top:calc(env(safe-area-inset-top,0px) + 16px);background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:20px;display:flex;flex-direction:column;gap:14px}
+.slip h2{font-size:18px}
+.lines{display:flex;flex-direction:column;gap:6px;font-size:14px;max-height:220px;overflow:auto}
+.lines div,.split div{display:flex;justify-content:space-between;gap:10px;font-variant-numeric:tabular-nums}
+.lines span:first-child{color:var(--muted)}
+.total{border-top:2px dashed var(--line);padding-top:14px}
+.total .big{font-family:var(--display);font-size:40px;font-weight:700;color:var(--accent);font-variant-numeric:tabular-nums;line-height:1.1}
+.total .big small{font-size:16px;color:var(--muted);font-weight:500}
+.split{display:flex;flex-direction:column;gap:6px;background:var(--bg);border-radius:10px;padding:12px;font-size:14px}
+.split b{font-variant-numeric:tabular-nums}
+.split .sub{font-size:13px;color:var(--muted);padding-inline-start:10px}
+.mine{display:flex;flex-direction:column;gap:4px;background:var(--accent-soft);border-radius:12px;padding:14px}
+.mine .lbl{font-size:13px;color:var(--muted)}
+.mine .amt{font-family:var(--display);font-size:28px;font-weight:700;color:var(--accent);font-variant-numeric:tabular-nums;line-height:1.2}
+.mine .pct{font-size:14px;font-weight:600}
+.stack{display:flex;height:10px;border-radius:6px;overflow:hidden;background:var(--line)}
+.stack span{display:block;height:100%}
+.k-mk{background:var(--muted)}.k-me{background:var(--accent)}.k-ds{background:var(--gold)}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-inline-end:6px;vertical-align:middle}
+.bar small{display:block;font-size:12px;opacity:.8}
+.bar{display:none}
+@media (max-width:900px){
+  .slip{position:static}
+  .bar{display:flex;position:fixed;inset:auto 0 0 0;z-index:5;justify-content:space-between;align-items:center;
+    background:var(--ink);color:var(--surface);padding-block:12px calc(12px + env(safe-area-inset-bottom,0px));
+    padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+  .bar b{font-family:var(--display);font-size:22px;font-variant-numeric:tabular-nums}
+}
+.tbl{width:100%;border-collapse:collapse;font-size:14px}
+.tbl th{text-align:right;color:var(--muted);font-weight:600;font-size:12.5px;padding:8px 10px;border-bottom:1px solid var(--line)}
+.tbl td{padding:6px 10px;border-bottom:1px solid var(--line)}
+.tbl input{width:100%;min-width:80px;padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);font:500 14px var(--body)}
+.scroll{overflow-x:auto}
+.empty{color:var(--muted);font-size:14px;padding:14px;text-align:center}
+.topbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}
+a.btn{text-decoration:none;display:inline-block}
+.gate{position:fixed;inset:0;z-index:20;background:var(--bg);display:grid;place-items:center;padding:16px}
+.gate .card{max-width:380px;text-align:center;align-items:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="topbar"><h1>حاسبة حملات الكتب</h1><span class="row" style="align-items:center"><span class="note" id="cloudMsg" role="status"></span><a class="btn ghost small back" href="admin.html">لوحة التحكم</a></span></div>
+    <p class="lede">ابنِ الحملة، واختر المسوّقين بأسعارهم، ثم انسخ العرض والاتفاقيات جاهزة للإرسال.</p>
+  </header>
+
+  <nav class="maintabs" role="tablist">
+    <button role="tab" data-tab="camp" aria-selected="true">الحملة</button>
+    <button role="tab" data-tab="mk" aria-selected="false">المسوّقون</button>
+    <button role="tab" data-tab="agr" aria-selected="false">الاتفاقيات</button>
+    <button role="tab" data-tab="set" aria-selected="false">نسبتي والأسعار</button>
+  </nav>
+
+  <div class="grid">
+    <section>
+      <!-- Campaign -->
+      <div class="panel" id="p-camp">
+        <div class="seg" role="tablist">
+          <button id="aud-author" aria-selected="true">المؤلفون</button>
+          <button id="aud-pub" aria-selected="false">دور النشر</button>
+        </div>
+        <div class="label">١. اختر الحملة</div>
+        <div class="presets" id="presets"></div>
+
+        <div class="label">٢. المسوّقون في هذه الحملة</div>
+        <div class="items" id="mkItems"></div>
+        <p class="note" style="margin-top:6px">أضف مسوّقين بأسعارهم من تبويب «المسوّقون»، ثم وزّع المقاطع عليهم هنا.</p>
+
+        <div class="label">٣. الخدمات</div>
+        <div class="row" style="margin-bottom:12px">
+          <label class="field">عدد الإصدارات (تكرار الحملة)<input type="number" id="books" min="1" value="1"></label>
+          <label class="field">ميزانية الإعلانات (تُدفع للمنصة)<input type="number" id="adbudget" min="0" step="100" value="0"></label>
+        </div>
+        <div class="items" id="items"></div>
+
+        <div class="card" style="margin-top:14px">
+          <h3>إضافة خدمة أخرى</h3>
+          <div class="row">
+            <label class="field wide" style="flex:1 1 200px">اسم الخدمة<input id="newSvcName" placeholder="مثال: بودكاست مع الكاتب"></label>
+            <label class="field">سعر البيع (ر.س)<input type="number" id="newSvcFee" min="0" value="100"></label>
+            <button class="btn" id="addSvc" type="button">إضافة</button>
+          </div>
+          <p class="note">تُحفظ الخدمة في قائمتك، وتقدر تحذفها من تبويب «نسبتي والأسعار».</p>
+        </div>
+      </div>
+
+      <!-- Marketers -->
+      <div class="panel" id="p-mk" hidden>
+        <div class="card">
+          <h3>إضافة مسوّق</h3>
+          <div class="form">
+            <label class="field">الاسم<input id="mName" placeholder="مثال: نورة"></label>
+            <label class="field">الحساب<input id="mHandle" placeholder="@books_noura" dir="ltr"></label>
+            <label class="field">سعر المقطع (ر.س)<input type="number" id="mPrice" min="0" value="25"></label>
+            <label class="field">ملاحظة<input id="mNote" placeholder="روايات، تفاعل عالي"></label>
+          </div>
+          <div><button class="btn" id="addMk" type="button">إضافة المسوّق</button></div>
+        </div>
+        <div class="card">
+          <h3>قائمة المسوّقين</h3>
+          <p class="note">«المسوّق العام» يُستخدم في الحملات الجاهزة بالسعر الافتراضي. عدّل أي سعر مباشرة من الجدول.</p>
+          <div class="scroll"><table class="tbl cards" id="mkTable"></table></div>
+        </div>
+      </div>
+
+      <!-- Agreements -->
+      <div class="panel" id="p-agr" hidden>
+        <div class="card">
+          <h3>بياناتك (تُحفظ)</h3>
+          <div class="form">
+            <label class="field">اسمك<input id="a-myName" data-a="myName"></label>
+            <label class="field">رقم وثيقة العمل الحر<input id="a-freelance" data-a="freelance"></label>
+            <label class="field">رقم التواصل<input id="a-phone" data-a="phone" dir="ltr"></label>
+          </div>
+        </div>
+        <div class="card">
+          <h3>اتفاقية العميل</h3>
+          <div class="form">
+            <label class="field">اسم العميل<input id="a-client" data-a="client"></label>
+            <label class="field">اسم الكتاب<input id="a-book" data-a="book"></label>
+            <label class="field">الكاتب<input id="a-author" data-a="author"></label>
+            <label class="field">تاريخ البدء<input type="date" id="a-start" data-a="start"></label>
+            <label class="field">مدة الحملة (أسابيع)<input type="number" id="a-weeks" data-a="weeks" min="1"></label>
+            <label class="field">الدفعة الأولى %<input type="number" id="a-deposit" data-a="deposit" min="0" max="100"></label>
+            <label class="field">عدد التعديلات المسموحة<input type="number" id="a-revs" data-a="revs" min="0"></label>
+            <label class="field">بقاء المقاطع (أيام)<input type="number" id="a-keep" data-a="keep" min="1"></label>
+          </div>
+          <div class="row"><button class="btn" id="genClient" type="button">إنشاء اتفاقية العميل</button></div>
+        </div>
+        <div class="card">
+          <h3>ملخص المسوّق</h3>
+          <div class="form">
+            <label class="field">المسوّق<select id="briefMk"></select></label>
+            <label class="field">موعد المراجعة<input type="date" id="a-review" data-a="review"></label>
+            <label class="field">موعد النشر<input type="date" id="a-pub" data-a="pub"></label>
+            <label class="field">وقت النشر<input id="a-time" data-a="time" placeholder="9 مساءً"></label>
+            <label class="field">الفكرة<input id="a-idea" data-a="idea" placeholder="رأيك بعد القراءة"></label>
+            <label class="field">ركّز على<input id="a-focus" data-a="focus"></label>
+            <label class="field">الوسم<input id="a-tag" data-a="tag" placeholder="#"></label>
+            <label class="field">حساب للإشارة<input id="a-mention" data-a="mention" dir="ltr" placeholder="@"></label>
+            <label class="field">رابط الشراء<input id="a-link" data-a="link" dir="ltr"></label>
+            <label class="field">كود الخصم أو التتبع<input id="a-code" data-a="code" dir="ltr"></label>
+          </div>
+          <div class="row">
+            <button class="btn" id="genBrief" type="button">الملخص الكامل</button>
+            <button class="btn ghost" id="genShort" type="button">نسخة واتساب مختصرة</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="row" style="justify-content:space-between"><h3 id="outTitle">النص الجاهز</h3>
+            <button class="btn small" id="copyOut" type="button">نسخ النص</button></div>
+          <textarea class="out" id="out" placeholder="اضغط أحد الأزرار أعلاه ليظهر النص هنا، وتقدر تعدّل عليه قبل النسخ."></textarea>
+          <p class="note">هذه نماذج عمل بسيطة وليست استشارة قانونية. مع المبالغ الكبيرة يُفضّل مراجعة محامٍ.</p>
+        </div>
+      </div>
+
+      <!-- Settings -->
+      <div class="panel" id="p-set" hidden>
+        <div class="card">
+          <h3>نسبتي والربح</h3>
+          <div class="form">
+            <label class="field">نسبتي من سعر الحملة %<input type="number" id="myPct" min="0" max="100"></label>
+            <label class="field">ربح الوكالة على المقاطع %<input type="number" id="mkUp" min="0"></label>
+            <label class="field">طريقة دفع المصمم<select id="dsMode"><option value="pct">نسبة من سعر الحملة</option><option value="fixed">أجر ثابت لكل خدمة</option></select></label>
+            <label class="field" id="dsPctWrap">نسبة المصمم من سعر الحملة %<input type="number" id="dsPct" min="0" max="100"></label>
+            <label class="field">سعر المسوّق العام (ر.س)<input type="number" id="general" min="0"></label>
+            <label class="field" style="flex-direction:row;align-items:center;gap:8px"><input type="checkbox" id="round" style="width:auto"> تقريب السعر (مثل 1,499)</label>
+          </div>
+          <p class="note">سعر الحملة = تكلفة المقاطع مع زيادة الوكالة عليها + أسعار الخدمات. المبلغ كله يدخل حساب الوكالة، ثم يُوزّع: المسوّقون تكلفتهم، المصمم نسبته أو أجره الثابت، أنتِ نسبتك من سعر الحملة، والباقي يبقى في صندوق الوكالة.</p>
+        </div>
+        <div class="card">
+          <h3>أسعار الخدمات للعميل</h3>
+          <div class="scroll"><table class="tbl" id="feeTable"></table></div>
+          <div><button class="btn ghost" id="reset" type="button">استرجاع الأسعار الأصلية</button></div>
+        </div>
+        <div class="card">
+          <h3>نسخة احتياطية</h3>
+          <p class="note">بياناتك محفوظة في هذا المتصفح فقط. انسخي النسخة الاحتياطية واحفظيها في ملاحظاتك، وألصقيها هنا لاسترجاع المسوّقين والأسعار على أي جهاز.</p>
+          <textarea class="out" id="backup" style="min-height:110px" dir="ltr" placeholder="ألصقي النسخة الاحتياطية هنا ثم اضغطي «استرجاع»"></textarea>
+          <div class="row">
+            <button class="btn" id="doBackup" type="button">نسخ النسخة الاحتياطية</button>
+            <button class="btn ghost" id="doRestore" type="button">استرجاع</button>
+            <span class="note" id="backupMsg" role="status"></span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <aside class="slip" aria-live="polite">
+      <h2 id="slipTitle">عرض السعر</h2>
+      <div class="lines" id="lines"></div>
+      <div class="total">
+        <div class="note">السعر للعميل</div>
+        <div class="big"><span id="total">0</span> <small>ر.س</small></div>
+        <p class="note" id="adNote"></p>
+      </div>
+      <div class="row">
+        <label class="field">نسبتي من سعر الحملة %<input type="number" id="myPctQ" min="0" max="100" style="width:120px"></label>
+        <label class="field">ربح الوكالة على المقاطع %<input type="number" id="mkUpQ" min="0" style="width:120px"></label>
+        <label class="field">دفع المصمم<select id="dsModeQ" style="width:150px"><option value="pct">نسبة من السعر</option><option value="fixed">أجر لكل خدمة</option></select></label>
+        <label class="field" id="dsPctWrapQ">نسبة المصمم من السعر %<input type="number" id="dsPctQ" min="0" max="100" style="width:120px"></label>
+      </div>
+      <div class="mine" id="mine"></div>
+      <div class="split" id="split"></div>
+      <button class="btn" id="copy" type="button">نسخ العرض لإرساله للعميل</button>
+    </aside>
+  </div>
+</div>
+<div class="bar"><span>السعر للعميل<small id="barMine"></small></span><b><span id="barTotal">0</span> ر.س</b></div>
+
+<script>
+const DEFAULT_DCOST={teaser:200,design:40,quote:20,mockup:40,bookmark:50,linkpage:50};
+const DEFAULT_FEES={clip:0,teaser:350,design:60,quote:40,mockup:80,plan:200,ads:200,giveaway:150,event:500,live:300,bookmark:100,tracking:75,shipping:100,linkpage:150,reviews:150,report:75};
+const BUILTIN=[
+ {id:'teaser',name:'مقطع تشويقي للكتاب',hint:'تريلر يُنتج مرة ويُستخدم في كل مكان'},
+ {id:'design',name:'تصميم منشور'},
+ {id:'quote',name:'بطاقة اقتباس من الكتاب'},
+ {id:'mockup',name:'مجسّم ثلاثي الأبعاد للكتاب'},
+ {id:'plan',name:'خطة تسويق للكتاب'},
+ {id:'ads',name:'إعداد حملة إعلانية ممولة',hint:'الميزانية منفصلة'},
+ {id:'tracking',name:'أكواد خصم وروابط تتبع لكل مسوّق',hint:'لقياس المبيعات من كل مقطع'},
+ {id:'giveaway',name:'مسابقة أو سحب على نسخ',hint:'الجوائز على العميل'},
+ {id:'live',name:'بث مباشر أو لقاء مع الكاتب'},
+ {id:'reviews',name:'تنسيق مراجعات على أبجد وGoodreads'},
+ {id:'linkpage',name:'صفحة روابط للكتاب'},
+ {id:'shipping',name:'تنسيق إرسال نسخ للمسوّقين',hint:'تكلفة الشحن على العميل'},
+ {id:'bookmark',name:'تصميم فاصل كتاب أو ملصق معرض',hint:'الطباعة على العميل'},
+ {id:'event',name:'تغطية معرض أو حفل توقيع'},
+ {id:'report',name:'تقرير نتائج'}
+];
+const PRESETS={
+ author:[
+  {id:'a-start',name:'البداية',desc:'لكاتب يجرّب التسويق لأول مرة',q:{clip:5,design:3,plan:1}},
+  {id:'a-tease',name:'التشويق',desc:'تريلر ومجسّم الكتاب مع مقاطع تنشره',q:{teaser:1,mockup:1,design:3,clip:5}},
+  {id:'a-pre',name:'العدّ التنازلي',desc:'قبل صدور الكتاب: تشويق ومسابقة',q:{teaser:1,mockup:1,design:6,clip:8,giveaway:1}},
+  {id:'a-quotes',name:'الاقتباسات',desc:'لكتاب صدر سابقاً ويحتاج دفعة',q:{quote:10,design:2,clip:6}},
+  {id:'a-launch',name:'الإطلاق',star:true,desc:'حملة إطلاق متكاملة مع إعلان ممول وتتبع',q:{clip:15,design:6,mockup:1,teaser:1,plan:1,ads:1,tracking:1,report:1}},
+  {id:'a-live',name:'لقاء القرّاء',desc:'بث مباشر مع الكاتب ومقاطع تدعو له',q:{live:1,design:3,clip:8,teaser:1,report:1}},
+  {id:'a-spread',name:'الانتشار',desc:'أكبر عدد من المقاطع والمحتوى',q:{clip:30,design:10,quote:5,mockup:1,teaser:1,plan:1,ads:1,giveaway:1,tracking:1,reviews:1,report:1}}
+ ],
+ pub:[
+  {id:'p-single',name:'إصدار جديد',desc:'حملة لكتاب واحد من الدار',q:{clip:15,design:6,mockup:1,teaser:1,plan:1,tracking:1,report:1}},
+  {id:'p-season',name:'موسم الإصدارات',star:true,desc:'ثلاثة كتب في حملة واحدة',q:{clip:36,design:15,mockup:3,teaser:3,plan:1,ads:1,tracking:1,report:1}},
+  {id:'p-fair',name:'معرض الكتاب',desc:'قبل المعرض وأثناءه وجلسات التوقيع',q:{event:1,clip:25,design:12,teaser:2,quote:10,bookmark:2,plan:1,ads:1,report:1}},
+  {id:'p-revive',name:'إحياء الكتب القديمة',desc:'اقتباسات ومسابقة لكتب في المخزون',q:{quote:15,clip:20,design:5,giveaway:1,report:1}},
+  {id:'p-month',name:'الاشتراك الشهري',desc:'حضور ثابت للدار كل شهر',q:{clip:40,design:16,quote:8,teaser:2,ads:1,report:1}}
+ ]
+};
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const num=v=>Math.max(0,Number(v)||0);
+const fmt=n=>Math.round(n).toLocaleString('en-US');
+const today=()=>{const d=new Date();return `${d.getDate()}/${d.getMonth()+1}/${d.getFullYear()}`};
+function fresh(){const p=PRESETS.author.find(x=>x.star);const {clip,...q}=p.q;return{
+  fees:{...DEFAULT_FEES},custom:[],marketers:[],general:25,myPct:20,mkUp:20,dsPct:10,round:false,dsMode:'pct',dcost:{...DEFAULT_DCOST},
+  audience:'author',preset:p.id,qty:q,mq:{general:clip},books:1,ad:0,
+  agr:{weeks:4,deposit:50,revs:2,keep:30}}}
+let S=fresh();
+try{const s=JSON.parse(localStorage.getItem('bookcalc-v3'));
+  if(s)S={...S,...s,fees:{...DEFAULT_FEES,...(s.fees||{})},dcost:{...DEFAULT_DCOST,...(s.dcost||{})},agr:{...S.agr,...(s.agr||{})}};
+  else{const o=JSON.parse(localStorage.getItem('bookcalc-v2'));if(o){S.marketers=o.marketers||[];S.custom=o.custom||[];S.general=o.general??25;S.agr={...S.agr,...(o.agr||{})};}}}catch(e){}
+const save=()=>{try{localStorage.setItem('bookcalc-v3',JSON.stringify(S))}catch(e){};if(window.calcCloud)window.calcCloud(S)};
+
+const allItems=()=>BUILTIN.map(i=>({...i,fee:num(S.fees[i.id])})).concat(S.custom.map(c=>({...c,hint:'خدمة أضفتها'})));
+const dc=id=>num((S.dcost||{})[id]);
+const allMk=()=>[{id:'general',name:'مسوّق عام',handle:'',price:num(S.general),note:'السعر الافتراضي'}].concat(S.marketers);
+const clipFee=()=>0;
+
+function calc(qty,mq,books){
+  books=Math.max(1,books||1);let mk=0,svc=0,clips=0;const pay=[];
+  for(const m of allMk()){const n=(mq[m.id]||0)*books;if(n){mk+=n*m.price;clips+=n;pay.push({name:m.name,n,amt:n*m.price});}}
+  for(const i of allItems())svc+=(qty[i.id]||0)*books*i.fee;
+  const mkSell=mk*(1+num(S.mkUp??20)/100);
+  let price=Math.round(mkSell+svc);
+  if(S.round&&price>0)price=Math.ceil((price+1)/50)*50-1;
+  let des=price*num(S.dsPct)/100;
+  if(S.dsMode==='fixed'){des=0;for(const i of allItems())des+=(qty[i.id]||0)*books*dc(i.id);}
+  const me=price*num(S.myPct)/100,ag=price-mk-des-me;
+  const rnd=price-Math.round(mkSell+svc);
+  return{mk,mkSell,svc,price,me,des,ag,rnd,clips,pay,books};
+}
+const presetCalc=p=>{const {clip=0,...q}=p.q;return calc(q,{general:clip},1)};
+
+/* ---------- renders ---------- */
+function stepper(kind,id,n,label){return `<div class="step">
+  <button type="button" data-k="${kind}" data-id="${id}" data-d="1" aria-label="زيادة ${esc(label)}">+</button>
+  <input type="number" min="0" value="${n}" data-k="${kind}" data-id="${id}" aria-label="كمية ${esc(label)}">
+  <button type="button" data-k="${kind}" data-id="${id}" data-d="-1" aria-label="إنقاص ${esc(label)}">−</button></div>`}
+function renderPresets(){
+  $('presets').innerHTML=PRESETS[S.audience].map(p=>`
+   <button class="preset" type="button" data-p="${p.id}" aria-pressed="${S.preset===p.id}">
+     ${p.star?'<span class="star">الأكثر طلباً</span>':''}<b>${p.name}</b><small>${p.desc}</small>
+     <span class="from">${fmt(presetCalc(p).price)} ر.س</span></button>`).join('')+`
+   <button class="preset" type="button" data-p="custom" aria-pressed="${S.preset==='custom'}">
+     <b>حملة مخصّصة</b><small>ابدأ من الصفر واختر ما تريد</small><span class="from">حسب الطلب</span></button>`;
+  $('aud-author').setAttribute('aria-selected',S.audience==='author');$('aud-pub').setAttribute('aria-selected',S.audience==='pub');
+}
+function renderMkItems(){
+  $('mkItems').innerHTML=allMk().map(m=>{const n=S.mq[m.id]||0;return `
+   <div class="item ${n?'':'off'}"><div class="nm">${esc(m.name)}${m.handle?` <small dir="ltr" style="display:inline">${esc(m.handle)}</small>`:''}<small>${esc(m.note||'')}</small></div>
+   <label class="unit">تكلفة المقطع<input class="pin" type="number" min="0" value="${m.price}" data-pm="${m.id}" aria-label="سعر مقطع ${esc(m.name)}"></label>${stepper('m',m.id,n,m.name)}</div>`}).join('');
+}
+function renderItems(){
+  $('items').innerHTML=allItems().map(i=>{const n=S.qty[i.id]||0;return `
+   <div class="item ${n?'':'off'}"><div class="nm">${esc(i.name)}${i.hint?`<small>${esc(i.hint)}</small>`:''}</div>
+   <div class="units"><label class="unit">سعر البيع<input class="pin" type="number" min="0" value="${i.fee}" data-pf="${i.id}" aria-label="سعر ${esc(i.name)}"></label>${S.dsMode==='fixed'?`<label class="unit ds">أجر المصمم<input class="pin" type="number" min="0" value="${dc(i.id)}" data-pd="${i.id}" aria-label="أجر المصمم على ${esc(i.name)}"></label>`:''}</div>${stepper('s',i.id,n,i.name)}</div>`}).join('');
+}
+function renderMkTable(){
+  $('mkTable').innerHTML=`<thead><tr><th>الاسم</th><th>الحساب</th><th>سعر المقطع</th><th>ملاحظة</th><th></th></tr></thead><tbody>`+
+   allMk().map(m=>m.id==='general'?`<tr><td data-l="الاسم"><b>مسوّق عام</b></td><td></td><td data-l="سعر المقطع"><input type="number" min="0" value="${m.price}" data-g="1" aria-label="سعر المسوّق العام"></td><td></td><td></td></tr>`:
+   `<tr><td data-l="الاسم"><input value="${esc(m.name)}" data-mid="${m.id}" data-f="name" aria-label="الاسم"></td>
+     <td data-l="الحساب"><input value="${esc(m.handle)}" data-mid="${m.id}" data-f="handle" dir="ltr" aria-label="الحساب"></td>
+     <td data-l="سعر المقطع"><input type="number" min="0" value="${m.price}" data-mid="${m.id}" data-f="price" aria-label="السعر"></td>
+     <td data-l="ملاحظة"><input value="${esc(m.note)}" data-mid="${m.id}" data-f="note" aria-label="ملاحظة"></td>
+     <td><button class="x" type="button" data-del="${m.id}">حذف</button></td></tr>`).join('')+'</tbody>';
+}
+function renderFeeTable(){
+  const rows=allItems();
+  $('feeTable').innerHTML=`<thead><tr><th>الخدمة</th><th>سعر البيع للعميل (ر.س)</th><th>أجر المصمم (ر.س)</th><th></th></tr></thead><tbody>`+
+   rows.map(r=>`<tr><td>${esc(r.name)}</td><td><input type="number" min="0" value="${r.fee}" data-fee="${r.id}" aria-label="سعر ${esc(r.name)}"></td><td><input type="number" min="0" value="${dc(r.id)}" data-dc="${r.id}" aria-label="أجر المصمم على ${esc(r.name)}"></td>
+   <td>${r.id.startsWith('c')&&S.custom.some(c=>c.id===r.id)?`<button class="x" type="button" data-delsvc="${r.id}">حذف</button>`:''}</td></tr>`).join('')+'</tbody>';
+}
+function renderSettings(){['myPct','dsPct'].forEach(k=>{$(k).value=S[k];$(k+'Q').value=S[k]});
+  $('dsMode').value=$('dsModeQ').value=S.dsMode;$('mkUp').value=$('mkUpQ').value=S.mkUp??20;$('dsPctWrap').hidden=$('dsPctWrapQ').hidden=S.dsMode==='fixed';$('round').checked=!!S.round;$('general').value=S.general;}
+function slipRows(r){
+  const rows=[];if(r.clips)rows.push(['مقاطع من صنّاع محتوى',r.clips]);
+  for(const i of allItems())if(S.qty[i.id])rows.push([i.name,S.qty[i.id]*r.books]);return rows;
+}
+function title(){const p=[...PRESETS.author,...PRESETS.pub].find(x=>x.id===S.preset);return p?`حملة ${p.name}`:'حملة مخصّصة'}
+function renderSlip(){
+  const r=calc(S.qty,S.mq,S.books);const rows=slipRows(r);
+  $('slipTitle').textContent=title();
+  $('lines').innerHTML=(r.books>1?`<div><span>عدد الإصدارات</span><span>${fmt(r.books)}</span></div>`:'')+
+    (rows.length?rows.map(([n,c])=>`<div><span>${esc(n)}</span><span>× ${fmt(c)}</span></div>`).join(''):'<p class="note">لم تختر أي خدمة بعد.</p>');
+  $('total').textContent=fmt(r.price);$('barTotal').textContent=fmt(r.price);
+  $('adNote').textContent=S.ad?`+ ميزانية إعلانات ${fmt(S.ad)} ر.س يدفعها العميل للمنصة مباشرة`:'لا يشمل السعر ميزانية الإعلانات الممولة.';
+  const pc=x=>r.price?Math.round(x/r.price*100):0;
+  $('mine').innerHTML=`<span class="lbl">نصيبك من هذه الحملة</span>
+    <span class="amt">${fmt(r.me)} ر.س</span>
+    <span class="pct">${fmt(S.myPct)}% من سعر الحملة · صندوق الوكالة: ${fmt(r.ag)} ر.س</span>
+    <div class="stack" aria-hidden="true"><span class="k-mk" style="width:${pc(r.mk)}%"></span><span class="k-ds" style="width:${pc(r.des)}%"></span><span class="k-me" style="width:${pc(r.me)}%"></span><span class="k-sv" style="width:${Math.max(0,pc(r.ag))}%"></span></div>`;
+  $('barMine').textContent=`نصيبك ${fmt(r.me)} ر.س (${fmt(S.myPct)}%)`;
+  const hr='style="border-top:1px solid var(--line);padding-top:6px"';
+  $('split').innerHTML=`<div><span><b>ما يدفعه العميل</b></span><span></span></div>`+
+    `<div><span>المقاطع (التكلفة + ربح الوكالة ${fmt(S.mkUp??20)}%)</span><b>${fmt(r.mkSell)} ر.س</b></div>`+
+    `<div><span>الخدمات</span><b>${fmt(r.svc)} ر.س</b></div>`+
+    (r.rnd?`<div><span>تقريب السعر</span><b>+ ${fmt(r.rnd)} ر.س</b></div>`:'')+
+    `<div ${hr}><span>سعر الحملة</span><b>${fmt(r.price)} ر.س</b></div>`+
+    `<div ${hr}><span><b>من يستلم كم؟</b></span><span></span></div>`+
+    `<div><span><i class="dot k-mk"></i>المسوّقون</span><b>${fmt(r.mk)} ر.س</b></div>`+
+    r.pay.map(p=>`<div class="sub"><span>${esc(p.name)} × ${fmt(p.n)}</span><span>${fmt(p.amt)}</span></div>`).join('')+
+    `<div><span><i class="dot k-ds"></i>المصمم (${S.dsMode==='fixed'?'أجر ثابت لكل خدمة':fmt(S.dsPct)+'% من السعر'})</span><b>${fmt(r.des)} ر.س</b></div>`+
+    `<div><span><i class="dot k-me"></i>أنتِ (${fmt(S.myPct)}% من السعر)</span><b>${fmt(r.me)} ر.س</b></div>`+
+    `<div><span><i class="dot k-sv"></i>صندوق الوكالة (الباقي)</span><b>${fmt(r.ag)} ر.س · ${pc(r.ag)}%</b></div>`+
+    `<div class="sub"><span>ربح الوكالة على المقاطع (${fmt(S.mkUp??20)}%)</span><span>+ ${fmt(r.mkSell-r.mk)}</span></div>`+
+    (r.svc?`<div class="sub"><span>الخدمات بعد أجر المصمم</span><span>+ ${fmt(r.svc-r.des)}</span></div>`:(r.des?`<div class="sub"><span>أجر المصمم</span><span>− ${fmt(r.des)}</span></div>`:''))+
+    (r.rnd?`<div class="sub"><span>تقريب السعر</span><span>+ ${fmt(r.rnd)}</span></div>`:'')+
+    (r.me?`<div class="sub"><span>نسبتك</span><span>− ${fmt(r.me)}</span></div>`:'')+
+    (r.price&&r.ag<0?`<div class="warn">الحملة خسرانة على الوكالة: المبالغ الموزّعة أكثر من سعر الحملة. ارفعي أسعار الخدمات أو أنزلي النسب.</div>`:'');
+  const sel=$('briefMk'),cur=sel.value;
+  sel.innerHTML=allMk().map(m=>`<option value="${m.id}">${esc(m.name)}${S.mq[m.id]?` (${fmt(S.mq[m.id]*r.books)} مقطع)`:''}</option>`).join('');
+  if(cur&&allMk().some(m=>m.id===cur))sel.value=cur;else{const f=allMk().find(m=>S.mq[m.id]);if(f)sel.value=f.id;}
+}
+function renderAgr(){document.querySelectorAll('[data-a]').forEach(el=>{el.value=S.agr[el.dataset.a]??''})}
+function all(){renderPresets();renderMkItems();renderItems();renderMkTable();renderFeeTable();renderSettings();renderSlip();save();}
+
+/* ---------- text generators ---------- */
+const v=(x,ph)=>x?x:`[${ph}]`;
+function quoteText(){const r=calc(S.qty,S.mq,S.books),dep=Math.min(100,num(S.agr.deposit)),d1=Math.round(r.price*dep/100);
+  return [title()+(r.books>1?` — لعدد ${r.books} إصدارات`:''),...slipRows(r).map(([n,c])=>`• ${n}: ${fmt(c)}`),'',`السعر: ${fmt(r.price)} ر.س`,
+  dep<100&&dep>0?`الدفع: ${fmt(d1)} ر.س عند الموافقة، و${fmt(r.price-d1)} ر.س قبل بدء النشر.`:'الدفع: كامل المبلغ عند الموافقة.',
+  S.ad?`ميزانية الإعلانات (تُدفع للمنصة مباشرة): ${fmt(S.ad)} ر.س`:'لا يشمل السعر ميزانية الإعلانات الممولة.'].join('\n')}
+function clientAgreement(){
+  const a=S.agr,r=calc(S.qty,S.mq,S.books),dep=Math.min(100,num(a.deposit));
+  const d1=Math.round(r.price*dep/100);
+  return `اتفاقية حملة تسويقية لكتاب
+
+التاريخ: ${today()}
+
+الطرف الأول (مقدّم الخدمة): ${v(a.myName,'اسمك')} — وثيقة عمل حر رقم: ${v(a.freelance,'الرقم')}
+الطرف الثاني (العميل): ${v(a.client,'اسم العميل')}
+الكتاب: ${v(a.book,'اسم الكتاب')} — للكاتب: ${v(a.author,'اسم الكاتب')}
+
+أولاً: الخدمات
+اسم الحملة: ${title()}${r.books>1?` — لعدد ${r.books} إصدارات`:''}
+${slipRows(r).map(([n,c])=>`• ${n}: ${c}`).join('\n')}
+مدة الحملة: ${v(a.weeks,'عدد')} أسابيع، تبدأ ${a.start?`من ${a.start}`:'من تاريخ استلام المواد في البند الرابع'}.
+
+ثانياً: السعر والدفع
+• قيمة الحملة: ${fmt(r.price)} ريال سعودي.
+• الدفعة الأولى: ${dep}% (${fmt(d1)} ريال) عند الموافقة على الاتفاقية، ولا يبدأ العمل قبلها.${dep<100?`
+• الدفعة الثانية: ${100-dep}% (${fmt(r.price-d1)} ريال) قبل بدء نشر المقاطع.`:''}
+• لا يشمل السعر:
+  - ميزانية الإعلانات الممولة${S.ad?` (المقترحة: ${fmt(S.ad)} ريال)`:''}، ويدفعها العميل للمنصة مباشرة.
+  - جوائز المسابقات، ونسخ الكتاب وشحنها للمسوّقين، وأي طباعة.
+
+ثالثاً: النتائج
+• يلتزم مقدّم الخدمة بتنفيذ كل الخدمات المذكورة في مواعيدها.
+• لا يضمن مقدّم الخدمة عدد مبيعات أو مشاهدات محدداً، لأن ذلك يعتمد على تفاعل الجمهور والمنصات.
+• يُسلَّم للعميل تقرير بروابط كل المقاطع ونتائجها خلال 7 أيام من انتهاء الحملة.
+
+رابعاً: التزامات العميل
+يرسل العميل خلال 3 أيام من الدفع:
+• صورة غلاف الكتاب بجودة عالية، وملخص الكتاب، ونبذة عن الكاتب.
+• من 5 إلى 10 اقتباسات من الكتاب، وروابط الشراء.
+• نسخاً من الكتاب للمسوّقين (ورقية أو PDF).
+أي تأخير في إرسال هذه المواد يؤخّر موعد الحملة بالمدة نفسها.
+
+خامساً: المراجعة والتعديلات
+• تُرسَل التصاميم والمقطع التشويقي للعميل للموافقة قبل النشر.
+• يحق للعميل ${v(a.revs,'عدد')} تعديلات لكل تصميم أو مقطع، وأي تعديل إضافي بتكلفة إضافية.
+• إذا لم يرد العميل خلال 3 أيام، يُعتبر العمل موافقاً عليه.
+• مقاطع صنّاع المحتوى تُكتب بأسلوبهم الشخصي، ويحق للعميل طلب تصحيح الأخطاء في المعلومات فقط.
+
+سادساً: النشر والإفصاح
+• جميع صنّاع المحتوى في الحملة لديهم رخصة موثوق، ويُذكر في كل مقطع مدفوع أنه إعلان، التزاماً بأنظمة الهيئة العامة لتنظيم الإعلام.
+• تبقى المقاطع منشورة ${v(a.keep,'عدد')} يوماً على الأقل.
+• يختار مقدّم الخدمة صنّاع المحتوى المناسبين للكتاب ويتولى التنسيق معهم.
+
+سابعاً: حقوق الاستخدام
+• يحق للعميل إعادة نشر التصاميم والمقطع التشويقي على حساباته دون حدود.
+• يحق للعميل مشاركة مقاطع صنّاع المحتوى مع الإشارة لأصحابها.
+• يحق لمقدّم الخدمة عرض الحملة ونتائجها ضمن أعماله، إلا إذا طلب العميل غير ذلك كتابياً.
+
+ثامناً: الإلغاء
+• قبل بدء العمل: تُسترد الدفعة الأولى كاملة.
+• بعد بدء التخطيط أو التصميم: لا تُسترد الدفعة الأولى.
+• بعد الاتفاق مع صنّاع المحتوى: لا يُسترد ما دُفع لهم.
+
+الموافقة
+الطرف الأول: ____________     الطرف الثاني: ____________`;
+}
+function briefData(){const m=allMk().find(x=>x.id===$('briefMk').value)||allMk()[0];const r=calc(S.qty,S.mq,S.books);
+  return{m,n:(S.mq[m.id]||1)*r.books}}
+function briefFull(){const a=S.agr,{m,n}=briefData();return `ملخص حملة: ${v(a.book,'اسم الكتاب')}
+إلى: ${m.id==='general'?'[اسم المسوّق]':m.name}
+
+عن الكتاب
+• الاسم: ${v(a.book,'اسم الكتاب')} — الكاتب: ${v(a.author,'اسم الكاتب')}
+• رابط الشراء: ${v(a.link,'الرابط')}${a.code?`\n• كود الخصم الخاص بك: ${a.code}`:''}
+
+المطلوب منك
+• عدد المقاطع: ${n} — ريلز أو تيك توك، مدته من 30 إلى 60 ثانية.
+• الفكرة: ${v(a.idea,'فكرة المقطع')}
+• ركّز على: ${v(a.focus,'النقاط المهمة')}
+• تجنّب: حرق أحداث الكتاب، والمقارنة السلبية بكتب أخرى.
+
+داخل المقطع
+• اكتب "إعلان" بشكل واضح، وضع رقم رخصة موثوق حسب الأنظمة.
+• أشِر إلى: ${v(a.mention,'@الحساب')}
+• الوسم: ${v(a.tag,'#الوسم')}
+• ضع رابط الشراء${a.code?' وكود الخصم':''} في البايو أو التعليق المثبّت.
+
+المواعيد
+• أرسل المقطع للمراجعة قبل: ${v(a.review,'التاريخ')}
+• موعد النشر: ${v(a.pub,'التاريخ')}${a.time?` — ${a.time}`:''}
+• أرسل رابط المقطع خلال 24 ساعة من النشر.
+
+الشروط
+• لا يُحذف المقطع قبل ${v(a.keep,'30')} يوماً من نشره.
+• يُسمح بتعديل واحد لتصحيح معلومة خاطئة.
+• يحق للكاتب أو الدار إعادة مشاركة المقطع مع ذكر اسمك.
+
+الأجر
+• ${fmt(m.price)} ريال للمقطع — المجموع: ${fmt(m.price*n)} ريال.
+• يُدفع خلال 3 أيام من النشر وإرسال الرابط.
+• إذا تأخر النشر أكثر من يومين دون عذر، يحق لنا إلغاء الطلب.
+
+للتواصل: ${v(a.phone,'رقمك')}`}
+function briefShort(){const a=S.agr,{m,n}=briefData();return `هلا ${m.id==='general'?'[الاسم]':m.name} 🌿 عندي لك حملة جديدة:
+
+📖 الكتاب: ${v(a.book,'اسم الكتاب')} — ${v(a.author,'الكاتب')}
+🎬 المطلوب: ${n} مقطع ريلز/تيك توك (30–60 ثانية) — ${v(a.idea,'الفكرة')}
+🚫 بدون حرق أحداث
+📅 المراجعة قبل ${v(a.review,'التاريخ')} — النشر ${v(a.pub,'التاريخ')}${a.time?` الساعة ${a.time}`:''}
+🏷️ اكتب "إعلان" + أشِر لـ ${v(a.mention,'@الحساب')} + ${v(a.tag,'#الوسم')}
+🔗 رابط الشراء: ${v(a.link,'الرابط')}${a.code?`\n🎟️ كودك: ${a.code}`:''}
+💰 الأجر: ${fmt(m.price)} ريال للمقطع (المجموع ${fmt(m.price*n)})، يُدفع بعد النشر وإرسال الرابط
+
+موافق؟`}
+
+/* ---------- events ---------- */
+document.querySelector('.maintabs').addEventListener('click',e=>{const b=e.target.closest('[data-tab]');if(!b)return;
+  document.querySelectorAll('.maintabs button').forEach(x=>x.setAttribute('aria-selected',x===b));
+  ['camp','mk','agr','set'].forEach(t=>$('p-'+t).hidden=t!==b.dataset.tab);});
+function setAud(a){S.audience=a;const p=PRESETS[a].find(x=>x.star)||PRESETS[a][0];applyPreset(p.id);}
+function applyPreset(id){S.preset=id;const p=PRESETS[S.audience].find(x=>x.id===id);
+  if(p){const {clip=0,...q}=p.q;S.qty={...q};S.mq={general:clip};}else{S.qty={};S.mq={};}S.books=1;$('books').value=1;all();}
+$('aud-author').onclick=()=>setAud('author');$('aud-pub').onclick=()=>setAud('pub');
+$('presets').addEventListener('click',e=>{const b=e.target.closest('[data-p]');if(b)applyPreset(b.dataset.p)});
+function onStep(e){const b=e.target.closest('button[data-d]');if(!b)return;const map=b.dataset.k==='m'?S.mq:S.qty;
+  map[b.dataset.id]=Math.max(0,(map[b.dataset.id]||0)+Number(b.dataset.d));all();}
+function onQty(e){const t=e.target;if(!t.dataset.k)return;(t.dataset.k==='m'?S.mq:S.qty)[t.dataset.id]=num(t.value);
+  t.closest('.item')?.classList.toggle('off',!num(t.value));renderPresets();renderSlip();save();}
+['items','mkItems'].forEach(id=>{$(id).addEventListener('click',onStep);$(id).addEventListener('input',onQty);});
+$('mkItems').addEventListener('input',e=>{const id=e.target.dataset.pm;if(!id)return;const val=num(e.target.value);
+  if(id==='general')S.general=val;else{const m=S.marketers.find(x=>x.id===id);if(m)m.price=val;}
+  renderPresets();renderMkTable();renderSlip();save();});
+$('items').addEventListener('input',e=>{const id=e.target.dataset.pf;if(!id)return;const c=S.custom.find(x=>x.id===id);
+  if(c)c.fee=num(e.target.value);else S.fees[id]=num(e.target.value);renderPresets();renderFeeTable();renderSlip();save();});
+$('items').addEventListener('input',e=>{const id=e.target.dataset.pd;if(!id)return;S.dcost[id]=num(e.target.value);renderPresets();renderFeeTable();renderSlip();save();});
+$('feeTable').addEventListener('input',e=>{const id=e.target.dataset.dc;if(!id)return;S.dcost[id]=num(e.target.value);renderPresets();renderItems();renderSlip();save();});
+['dsMode','dsModeQ'].forEach(i=>$(i).onchange=e=>{S.dsMode=e.target.value;all();});
+$('books').oninput=e=>{S.books=Math.max(1,num(e.target.value));renderSlip();save();};
+$('adbudget').oninput=e=>{S.ad=num(e.target.value);renderSlip();save();};
+$('addSvc').onclick=()=>{const n=$('newSvcName').value.trim();if(!n){$('newSvcName').focus();return;}
+  const id='c'+Date.now();S.custom.push({id,name:n,fee:num($('newSvcFee').value)});S.qty[id]=1;$('newSvcName').value='';all();};
+$('addMk').onclick=()=>{const n=$('mName').value.trim();if(!n){$('mName').focus();return;}
+  S.marketers.push({id:'m'+Date.now(),name:n,handle:$('mHandle').value.trim(),price:num($('mPrice').value),note:$('mNote').value.trim()});
+  ['mName','mHandle','mNote'].forEach(i=>$(i).value='');all();};
+$('mkTable').addEventListener('input',e=>{const t=e.target;
+  if(t.dataset.g){S.general=num(t.value);}
+  else if(t.dataset.mid){const m=S.marketers.find(x=>x.id===t.dataset.mid);if(m)m[t.dataset.f]=t.dataset.f==='price'?num(t.value):t.value;}
+  renderPresets();renderMkItems();renderSlip();save();});
+$('mkTable').addEventListener('click',e=>{const b=e.target.closest('[data-del]');if(!b)return;
+  if(b.dataset.confirm!=='1'){b.dataset.confirm='1';b.textContent='تأكيد الحذف';return;}
+  S.marketers=S.marketers.filter(m=>m.id!==b.dataset.del);delete S.mq[b.dataset.del];all();});
+$('feeTable').addEventListener('input',e=>{const id=e.target.dataset.fee;if(!id)return;const c=S.custom.find(x=>x.id===id);
+  if(c)c.fee=num(e.target.value);else S.fees[id]=num(e.target.value);renderPresets();renderItems();renderMkItems();renderSlip();save();});
+$('feeTable').addEventListener('click',e=>{const b=e.target.closest('[data-delsvc]');if(!b)return;
+  S.custom=S.custom.filter(c=>c.id!==b.dataset.delsvc);delete S.qty[b.dataset.delsvc];all();});
+['myPct','dsPct'].forEach(k=>{const h=(src,dst)=>()=>{S[k]=num($(src).value);$(dst).value=S[k];renderPresets();renderSlip();save();};
+  $(k).oninput=h(k,k+'Q');$(k+'Q').oninput=h(k+'Q',k);});
+$('round').onchange=e=>{S.round=e.target.checked;renderPresets();renderSlip();save();};
+['mkUp','mkUpQ'].forEach(i=>$(i).oninput=e=>{S.mkUp=num(e.target.value);$(i==='mkUp'?'mkUpQ':'mkUp').value=S.mkUp;renderPresets();renderSlip();save();});
+$('general').oninput=e=>{S.general=num(e.target.value);renderPresets();renderMkItems();renderMkTable();renderSlip();save();};
+$('reset').onclick=()=>{S.fees={...DEFAULT_FEES};S.general=25;S.myPct=20;S.mkUp=20;S.dsPct=10;S.round=false;S.dsMode='pct';S.dcost={...DEFAULT_DCOST};all();};
+document.querySelectorAll('[data-a]').forEach(el=>el.addEventListener('input',()=>{S.agr[el.dataset.a]=el.value;save();}));
+const show=(t,txt)=>{$('outTitle').textContent=t;$('out').value=txt;};
+$('genClient').onclick=()=>show('اتفاقية العميل',clientAgreement());
+$('genBrief').onclick=()=>show('ملخص المسوّق',briefFull());
+$('genShort').onclick=()=>show('رسالة واتساب للمسوّق',briefShort());
+function copyText(txt,btn,label,fallbackEl){const done=()=>{btn.textContent='تم النسخ';setTimeout(()=>btn.textContent=label,1600)};
+  const fb=()=>{if(fallbackEl){fallbackEl.focus();fallbackEl.select();}btn.textContent='انسخ النص يدوياً';};
+  try{navigator.clipboard.writeText(txt).then(done,fb)}catch(e){fb()}}
+$('copyOut').onclick=()=>copyText($('out').value,$('copyOut'),'نسخ النص',$('out'));
+$('copy').onclick=()=>{show('عرض السعر',quoteText());copyText(quoteText(),$('copy'),'نسخ العرض لإرساله للعميل',null);};
+
+$('doBackup').onclick=()=>{const {marketers,custom,fees,general,myPct,mkUp,dsPct,round,dsMode,dcost,agr,ad}=S;
+  const txt=JSON.stringify({v:3,marketers,custom,fees,general,myPct,mkUp,dsPct,round,dsMode,dcost,ad,agr:{myName:agr.myName,freelance:agr.freelance,phone:agr.phone}});
+  $('backup').value=txt;copyText(txt,$('doBackup'),'نسخ النسخة الاحتياطية',$('backup'));$('backupMsg').textContent='';};
+$('doRestore').onclick=()=>{try{const d=JSON.parse($('backup').value);if(!d||!Array.isArray(d.marketers))throw 0;
+  S.marketers=d.marketers;S.custom=d.custom||[];S.fees={...DEFAULT_FEES,...(d.fees||{})};
+  ['general','myPct','mkUp','dsPct','round','dsMode','dcost','ad'].forEach(k=>{if(d[k]!=null)S[k]=d[k]});$('adbudget').value=S.ad;S.agr={...S.agr,...(d.agr||{})};
+  renderAgr();all();$('backupMsg').textContent=`تم استرجاع ${d.marketers.length} مسوّق.`;}
+  catch(e){$('backupMsg').textContent='النص غير صحيح. تأكدي أنك ألصقتِ النسخة الاحتياطية كاملة.';}};
+$('books').value=S.books;$('adbudget').value=S.ad;renderAgr();all();
+// تحميل البيانات من قاعدة البيانات (يستدعيه js/calc-cloud.js)
+window.calcState=()=>S;
+window.calcLoad=s=>{S={...fresh(),...s,fees:{...DEFAULT_FEES,...(s.fees||{})},dcost:{...DEFAULT_DCOST,...(s.dcost||{})},agr:{...fresh().agr,...(s.agr||{})}};
+  $('books').value=S.books;$('adbudget').value=S.ad;renderAgr();all();};
+</script>
+<div id="gate" class="gate" hidden><div class="card"><h3>الحاسبة للمديرة فقط</h3><p class="note" id="gateMsg">سجّلي الدخول من لوحة التحكم أولًا، ثم ارجعي هنا.</p><a class="btn" href="admin.html">لوحة التحكم</a></div></div>
+<script src="js/config.js"></script>
+<script type="module" src="js/calc-cloud.js"></script>
+
+</body></html>

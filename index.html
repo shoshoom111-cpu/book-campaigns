@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>إرسال روابط النشر</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Naskh+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+<div class="wrap">
+  <main class="slip" style="margin-top:24px">
+    <form class="card" id="entry-form" novalidate>
+      <h1 style="margin-bottom:12px">إرسال روابط النشر</h1>
+      <div class="field">
+        <label for="entry-code">رمزك</label>
+        <input id="entry-code" class="ltr code" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="6" placeholder="••••••">
+        <p class="hint" id="entry-who" aria-live="polite"></p>
+      </div>
+      <div class="field">
+        <label for="entry-book">الكتاب</label>
+        <select id="entry-book" disabled><option value="">اكتب رمزك أولًا</option></select>
+      </div>
+      <div class="field">
+        <label for="entry-links">الروابط</label>
+        <textarea id="entry-links" class="ltr" placeholder="https://..." style="min-height:110px"></textarea>
+        <p class="hint">كل رابط في سطر.</p>
+      </div>
+      <button type="submit" class="primary" id="entry-send" disabled>إرسال</button>
+      <div id="entry-msg" aria-live="polite"></div>
+    </form>
+  </main>
+</div>
+<script src="js/config.js"></script>
+<script src="js/marketer.js"></script>
+<script type="module" src="js/fb.js"></script>
+</body>
+</html>

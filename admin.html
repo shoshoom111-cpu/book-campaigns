@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>لوحة المسوقين</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Naskh+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="top"><h1>لوحة المسوقين</h1><a class="btn" id="calc-link" href="calc.html" hidden>حاسبة الحملات</a></header>
+  <main id="gate" class="gate"><p class="empty">جارٍ التحميل…</p></main>
+  <main id="view-manager" hidden>
+    <nav class="tabs" id="tabs" aria-label="أقسام اللوحة"></nav>
+    <div id="panel"></div>
+  </main>
+</div>
+<div id="toast" role="status" aria-live="polite" hidden></div>
+<script src="js/config.js"></script>
+<script src="js/admin.js"></script>
+<script type="module" src="js/fb.js"></script>
+</body>
+</html>
