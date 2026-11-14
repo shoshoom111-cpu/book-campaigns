@@ -57,6 +57,7 @@ var dd=new Intl.DateTimeFormat("ar-SA-u-ca-gregory-nu-latn",{day:"numeric",month
 function day(s){return s?dd.format(new Date(s+"T12:00:00")):"غير محدد"}
 function money(n){return Number(n||0).toLocaleString("en-US")+" ريال"}
 function pct(a,b){return b?Math.round(a/b*100)+"%":"—"}
+function nLinksG(n){return n===2?"رابطين":nLinks(n)}
 function nLinks(n){return n===1?"رابط واحد":n===2?"رابطان":n+" روابط"}
 function nPosts(n){return n===1?"منشور واحد":n===2?"منشوران":n+" منشورات"}
 function clean(h){return String(h).trim().replace(/^@/,"").toLowerCase()}
@@ -153,6 +154,30 @@ function message(b){
   var body=order.map(function(p){return p+":\n"+groups[p].join("\n")}).join("\n\n");
   return S.template.split("{الكاتب}").join(A(b).name).split("{الكتاب}").join(b.title).split("{الروابط}").join(body);
 }
+function addrText(b){
+  var ms=b.mk.map(M).filter(Boolean);
+  return "عناوين المسوقين لكتاب «"+b.title+"» لإرسال النسخ:\n\n"+ms.map(function(m,i){
+    return (i+1)+") "+m.name+(m.phone?" — "+m.phone:"")+"\n"+(m.address||"(لا يوجد عنوان)");
+  }).join("\n\n");
+}
+/* ---------- search ---------- */
+UI.q={};
+function search(key,ph){return '<div class="inline" style="margin:0 0 10px"><input type="search" id="q-'+key+'" data-q="'+key+'" value="'+esc(UI.q[key]||"")+'" placeholder="'+ph+'" aria-label="بحث" autocomplete="off"></div><p class="hint" id="qn-'+key+'" hidden></p>'}
+function applySearch(){
+  var inp=document.querySelector("#panel [data-q]"); if(!inp)return;
+  var q=(UI.q[inp.dataset.q]||"").trim().toLowerCase(), n=0, all=0;
+  document.querySelectorAll("#panel .files > details[data-find]").forEach(function(d){all++;var ok=!q||d.dataset.find.indexOf(q)>-1;d.hidden=!ok;if(ok)n++});
+  var hn=$("qn-"+inp.dataset.q); hn.hidden=!q; hn.textContent=n?n+" من "+all:"لا توجد نتائج.";
+}
+/* ---------- two-tap delete ---------- */
+function arm(t,msg){
+  if(t.dataset.confirm==="1")return true;
+  var old=t.innerHTML;t.dataset.confirm="1";t.classList.add("armed");
+  if(!t.classList.contains("ib"))t.innerHTML=ico("trash")+"تأكيد الحذف";
+  toast(msg);
+  setTimeout(function(){if(t.isConnected){t.dataset.confirm="";t.classList.remove("armed");t.innerHTML=old}},5000);
+  return false;
+}
 function remind(b,m){
   return "أهلًا "+m.name+"،\nتذكير بنشر كتاب «"+b.title+"». المطلوب "+nPosts(b.target||1)+" ووصلنا "+count(b.id,m.id,"")+"."+(b.end?"\nتنتهي الحملة "+day(b.end)+".":"")+"\nشكرًا لك.";
 }
@@ -169,6 +194,7 @@ function render(){
     return '<button type="button" data-tab="'+t[0]+'" id="tab-'+t[0]+'" class="'+(UI.tab===t[0]?"on":"")+'">'+ico(t[2])+'<span>'+t[1]+'</span>'+(t[0]==="today"&&n?'<b class="badge">'+n+'</b>':'')+'</button>';
   }).join("");
   $("panel").innerHTML=({today:pToday,marketers:pMarketers,books:pBooks,authors:pAuthors,reports:pReports,settings:pSettings})[UI.tab]();
+  applySearch();
   applyTheme();
   persist();
 }
@@ -314,7 +340,7 @@ function dataForm(b){
 function pBooks(){
   var list=S.books.filter(function(b){return !b.archived||UI.showArch}).sort(function(a,b){return stage(a)===stage(b)?0:[1,0,2,3][stage(a)]-[1,0,2,3][stage(b)]});
   var arch=S.books.filter(function(b){return b.archived}).length;
-  var h='<div class="files">'+list.map(function(b){
+  var h=search("books","ابحثي بعنوان الكتاب أو الكاتب")+'<div class="files">'+list.map(function(b){
     var st=stage(b), d=left(b), pend=count(b.id,"","pending"), c=checks(b), ns=nextStep(b);
     var sum='<span class="s-name">'+esc(b.title)+'<small>'+esc(A(b).name)+'</small></span><span class="s-meta">'+
       (pend?'<span class="pill wait">'+ico("link")+pend+'</span>':'')+
@@ -329,10 +355,17 @@ function pBooks(){
       body+=mBlocks(b,true)+(st===1?assignAdd(b):'')+sendBox(b);
       body+=det("ed"+b.id,"بيانات الحملة",dataForm(b),"sub");
     }
+    if(b.mk.length){
+      var miss=b.mk.map(M).filter(function(m){return m&&!m.address}).length, au=A(b);
+      body+='<h4>عناوين المسوقين للكاتب</h4><p class="hint">'+(miss?ico("warn")+miss+' من '+b.mk.length+' بدون عنوان. أضيفيه من ملف المسوق.':'جاهزة لإرسالها للكاتب لشحن النسخ.')+'</p>'+
+        '<div class="acts"><button type="button" class="small" data-act="addr-copy" data-id="'+b.id+'">'+ico("copy")+'نسخ العناوين</button>'+
+        (au.phone?walink(wa(au.phone,addrText(b)),"إرسال العناوين للكاتب بالواتساب","للكاتب"):'')+'</div>';
+    }
     body+='<div class="acts end"><button type="button" class="small" data-act="report" data-id="'+b.id+'">'+ico("chart")+'تقريري</button>'+
       '<button type="button" class="small" data-act="dup" data-id="'+b.id+'">'+ico("copy")+'تكرار</button>'+
-      '<button type="button" class="small" data-act="arch" data-id="'+b.id+'">'+ico("box")+(b.archived?"استرجاع":"أرشفة")+'</button></div>';
-    return det(b.id,sum,body);
+      '<button type="button" class="small" data-act="arch" data-id="'+b.id+'">'+ico("box")+(b.archived?"استرجاع":"أرشفة")+'</button>'+
+      '<button type="button" class="small danger" data-act="b-del" data-id="'+b.id+'">'+ico("trash")+'حذف</button></div>';
+    return det(b.id,sum,body).replace('<details ','<details data-find="'+esc((b.title+" "+A(b).name).toLowerCase())+'" ');
   }).join("")+'</div>';
   h+='<div class="foot">'+det("add-b",ico("plus")+"كتاب جديد",'<form id="add-book"><div class="bar">'+
     '<div><label for="ab-title">العنوان</label><input id="ab-title" required></div>'+
@@ -346,7 +379,7 @@ function pMarketers(){
   var list=S.marketers.filter(function(m){return !m.archived||UI.showArchM})
     .sort(function(a,b){return ((a.archived?1:0)-(b.archived?1:0))||(b.active-a.active)||(count("",b.id,"")-count("",a.id,""))});
   var archM=S.marketers.filter(function(m){return m.archived}).length;
-  var h='<div class="files">'+list.map(function(m){
+  var h=search("marketers","ابحثي بالاسم أو الجوال أو الحساب")+'<div class="files">'+list.map(function(m){
     var r=record(m);
     var sum='<span class="s-name">'+esc(m.name)+'</span><span class="s-meta">'+(m.archived?'<span class="pill plain">'+ico("box")+'مؤرشف</span>':m.active?'':'<span class="pill bad">موقوف</span>')+
       (r.owed?'<span class="pill plain">'+ico("money")+r.owed.toLocaleString("en-US")+'</span>':'')+ring(r.got,r.need)+'</span>';
@@ -369,8 +402,9 @@ function pMarketers(){
       '<div class="acts end">'+(m.archived?'':'<button type="button" class="small" data-act="toggle" data-id="'+m.id+'">'+(m.active?"إيقاف":"تفعيل")+'</button>')+
       '<button type="button" class="small" data-act="m-arch" data-id="'+m.id+'">'+ico("box")+(m.archived?"استرجاع":"أرشفة")+'</button>'+
       '<button type="button" class="small" data-act="recode" data-id="'+m.id+'">رمز جديد</button>'+
-      (m.phone?walink(wa(m.phone,codeMsg),"إرسال الرمز بالواتساب","الرمز"):'')+'</div>';
-    return det(m.id,sum,body);
+      (m.phone?walink(wa(m.phone,codeMsg),"إرسال الرمز بالواتساب","الرمز"):'')+
+      '<button type="button" class="small danger" data-act="m-del" data-id="'+m.id+'">'+ico("trash")+'حذف</button></div>';
+    return det(m.id,sum,body).replace('<details ','<details data-find="'+esc([m.name,m.phone,m.code].concat(m.accounts.map(function(x){return x.h})).join(" ").toLowerCase())+'" ');
   }).join("")+'</div>';
   h+='<div class="foot">'+det("add-m",ico("plus")+"مسوقون جدد",'<form id="bulk-marketers">'+
     '<label for="bm-text">سطر لكل مسوق: الاسم، الجوال</label>'+
@@ -467,6 +501,7 @@ function pSettings(){
 
 /* ---------- manager events ---------- */
 $("tabs").addEventListener("click",function(e){var t=e.target.closest("[data-tab]");if(t){UI.tab=t.dataset.tab;render()}});
+$("panel").addEventListener("input",function(e){var k=e.target.dataset&&e.target.dataset.q;if(k){UI.q[k]=e.target.value;applySearch()}});
 $("panel").addEventListener("toggle",function(e){var k=e.target.dataset&&e.target.dataset.key;if(k)UI.open[k]=e.target.open},true);
 $("panel").addEventListener("change",function(e){
   var t=e.target, ds=t.dataset;
@@ -499,9 +534,23 @@ $("panel").addEventListener("click",function(e){
   var t=e.target.closest("[data-act]"); if(!t)return;
   var a=t.dataset.act, i=t.dataset.id;
   if(a==="del"){
-    if(t.dataset.confirm!=="1"){t.dataset.confirm="1";t.classList.add("armed");t.title=t.ariaLabel="اضغطي مرة ثانية للحذف";toast("اضغطي السلة مرة ثانية لحذف الرابط.");
-      setTimeout(function(){if(t.isConnected){t.dataset.confirm="";t.classList.remove("armed");t.title=t.ariaLabel="حذف الرابط"}},4000);return}
+    if(!arm(t,"اضغطي السلة مرة ثانية لحذف الرابط."))return;
     S.links=S.links.filter(function(l){return l.id!==i});toast("حُذف الرابط.");render()}
+  else if(a==="b-del"){
+    var db=B(i), nl=count(i,"","");
+    if(!arm(t,"حذف «"+db.title+"» نهائيًا"+(nl?" مع "+nLinksG(nl):"")+" ومستحقاته. اضغطي «تأكيد الحذف» للمتابعة."))return;
+    S.books=S.books.filter(function(b){return b.id!==i});S.links=S.links.filter(function(l){return l.b!==i});delete UI.open[i];
+    toast("حُذف الكتاب «"+db.title+"».");render()}
+  else if(a==="m-del"){
+    var dm=M(i), ml=count("",i,""), mb=S.books.filter(function(b){return b.mk.indexOf(i)>-1}).length;
+    if(!arm(t,"حذف «"+dm.name+"» نهائيًا"+(mb?" من "+mb+" حملة":"")+(ml?" مع "+nLinksG(ml):"")+"، ويتوقف رمزه. اضغطي «تأكيد الحذف» للمتابعة."))return;
+    S.marketers=S.marketers.filter(function(m){return m.id!==i});
+    S.books.forEach(function(b){var k=b.mk.indexOf(i);if(k>-1)b.mk.splice(k,1);if(b.pay)delete b.pay[i]});
+    S.links=S.links.filter(function(l){return l.m!==i});delete UI.open[i];
+    toast("حُذف المسوق «"+dm.name+"».");render()}
+  else if(a==="addr-copy"){
+    var ab0=B(i), miss0=ab0.mk.map(M).filter(function(m){return m&&!m.address}).map(function(m){return m.name});
+    copy(addrText(ab0),miss0.length?"نُسخت العناوين. ناقص عنوان: "+miss0.join("، "):"نُسخت العناوين.");}
   else if(a==="toggle"){var m=M(i);m.active=!m.active;render()}
   else if(a==="m-arch"){var am=M(i);am.archived=!am.archived;if(am.archived)am.active=false;toast(am.archived?"نُقل للأرشيف وأُوقف رمزه.":"رجع من الأرشيف. فعّليه ليشتغل رمزه.");render()}
   else if(a==="show-arch-m"){UI.showArchM=!UI.showArchM;render()}
@@ -524,7 +573,7 @@ $("panel").addEventListener("click",function(e){
     var ab={id:id(),title:bt,authorId:i,start:iso(0),end:iso(30),target:1,mk:[],archived:false,reportSent:false,pay:{}};
     S.books.unshift(ab);UI.tab="books";UI.open[ab.id]=true;toast("أُضيف الكتاب. كلّفي المسوقين.");render();
   }
-  else if(a==="a-del"){S.authors=S.authors.filter(function(x){return x.id!==i});render()}
+  else if(a==="a-del"){if(!arm(t,"اضغطي «تأكيد الحذف» لحذف الكاتب."))return;S.authors=S.authors.filter(function(x){return x.id!==i});render()}
   else if(a==="dup"){
     var o=B(i), len=o.start&&o.end?Math.round((new Date(o.end)-new Date(o.start))/D):30, nb={id:id(),title:"حملة جديدة",authorId:"",start:iso(0),end:iso(len),target:o.target||1,mk:o.mk.filter(function(x){return M(x).active}),archived:false,reportSent:false,pay:{}};
     nb.mk.forEach(function(x){nb.pay[x]={amount:pay(o,x).amount,paid:false,paidAt:""}});
