@@ -78,7 +78,8 @@ function check(l){
   return accs.some(function(a){return clean(a.h)===h})?{c:"good",t:"مطابق"}:{c:"bad",t:"حساب آخر: @"+h};
 }
 function wa(phone,text){
-  var d=String(phone||"").replace(/\D/g,"");
+  var d=String(phone||"").replace(/[٠-٩]/g,function(c){return "٠١٢٣٤٥٦٧٨٩".indexOf(c)}).replace(/\D/g,"");
+  if(d.indexOf("00")===0)d=d.slice(2);
   if(d.indexOf("05")===0)d="966"+d.slice(1); else if(d.length===9&&d.charAt(0)==="5")d="966"+d;
   return "https://wa.me/"+d+"?text="+encodeURIComponent(text);
 }
@@ -150,7 +151,7 @@ function message(b){
     var p=plat(l.url)||"أخرى"; if(!groups[p]){groups[p]=[];order.push(p)} groups[p].push(l.url);
   });
   var body=order.map(function(p){return p+":\n"+groups[p].join("\n")}).join("\n\n");
-  return S.template.replace("{الكاتب}",A(b).name).replace("{الكتاب}",b.title).replace("{الروابط}",body);
+  return S.template.split("{الكاتب}").join(A(b).name).split("{الكتاب}").join(b.title).split("{الروابط}").join(body);
 }
 function remind(b,m){
   return "أهلًا "+m.name+"،\nتذكير بنشر كتاب «"+b.title+"». المطلوب "+nPosts(b.target||1)+" ووصلنا "+count(b.id,m.id,"")+"."+(b.end?"\nتنتهي الحملة "+day(b.end)+".":"")+"\nشكرًا لك.";
@@ -207,7 +208,10 @@ function persist(){
   ["authors","marketers","books"].forEach(function(c){var now={};S[c].forEach(function(o){now[o.id]=o});diff(c,now)});
   diff("codes",wantedCodes());
   var live={};
-  S.links.forEach(function(l){live[l.id]=1;if(l.id in SAVED.links&&SAVED.links[l.id]!==l.status){var st=l.status;ops.push({t:"upd",c:"links",id:l.id,data:{status:st}});done.push(function(){SAVED.links[l.id]=st})}});
+  S.links.forEach(function(l){live[l.id]=1;
+    // رابط موجود هنا وغير موجود في القاعدة: جاء من استرجاع نسخة احتياطية
+    if(!(l.id in SAVED.links)){var st0=l.status;ops.push({t:"set",c:"links",id:l.id,data:{m:l.m,b:l.b,url:l.url,status:st0,at:new Date(l.at||Date.now())}});done.push(function(){SAVED.links[l.id]=st0});return}
+    if(SAVED.links[l.id]!==l.status){var st=l.status;ops.push({t:"upd",c:"links",id:l.id,data:{status:st}});done.push(function(){SAVED.links[l.id]=st})}});
   Object.keys(SAVED.links).forEach(function(k){if(!live[k]){ops.push({t:"del",c:"links",id:k});done.push(function(){delete SAVED.links[k]})}});
   if(SAVED.template!==S.template){var tp=S.template;ops.push({t:"set",c:"settings",id:"main",data:{template:tp}});done.push(function(){SAVED.template=tp})}
   if(!ops.length)return;
@@ -229,7 +233,7 @@ function unsaved(){
   if(saving||again)return true;
   var s=SAVED, d=false;
   ["authors","marketers","books"].forEach(function(c){var ids={};S[c].forEach(function(o){ids[o.id]=1;if(s[c][o.id]!==stab(o))d=true});Object.keys(s[c]).forEach(function(k){if(!ids[k])d=true})});
-  S.links.forEach(function(l){if(l.id in s.links&&s.links[l.id]!==l.status)d=true});
+  S.links.forEach(function(l){if(!(l.id in s.links)||s.links[l.id]!==l.status)d=true});
   return d||s.template!==S.template;
 }
 window.addEventListener("beforeunload",function(e){if(unsaved()){e.preventDefault();e.returnValue=""}});
@@ -451,7 +455,13 @@ function pSettings(){
       return '<button type="button" class="sw" data-act="color" data-color="'+c[0]+'" style="background:'+c[1]+'" title="'+c[2]+'" aria-label="'+c[2]+'"></button>';
     }).join("")+'</div><button type="button" class="small" data-act="mode" id="mode-btn">الوضع الداكن</button></div></section>'+
   '<section class="sec"><h2>رسالة الكاتب</h2><textarea id="tpl" style="min-height:150px" aria-label="قالب رسالة الكاتب">'+esc(S.template)+'</textarea></section>'+
-  '<section class="sec"><h2>نسخة احتياطية</h2><div class="acts"><button type="button" class="small primary" data-act="backup" id="bk-btn">تنزيل</button></div></section>'+
+  '<section class="sec"><h2>نسخة احتياطية</h2><div class="acts"><button type="button" class="small primary" data-act="backup" id="bk-btn">تنزيل</button>'+
+    '<button type="button" class="small" data-act="restore-pick">استرجاع من ملف</button><input type="file" id="restore-file" accept=".json,application/json" hidden></div>'+
+    (UI.restore?'<div class="msg err" style="margin-top:10px">سيُستبدل كل ما في اللوحة بنسخة '+esc(UI.restore.when)+': '+
+      UI.restore.d.marketers.length+' مسوق، '+UI.restore.d.authors.length+' كاتب، '+UI.restore.d.books.length+' كتاب، '+nLinks(UI.restore.d.links.length)+'. '+
+      'أي شيء أُضيف بعد تاريخ النسخة سيُحذف. قبل الاستبدال تنزل نسخة من بياناتك الحالية تلقائيًا.'+
+      '<div class="acts" style="margin-top:8px"><button type="button" class="small danger" data-act="restore-go">استبدال البيانات</button><button type="button" class="small" data-act="restore-cancel">إلغاء</button></div></div>':'')+
+  '</section>'+
   '<section class="sec"><h2>الحساب</h2><div class="acts"><button type="button" class="small" data-act="signout">تسجيل الخروج</button></div></section>';
 }
 
@@ -469,11 +479,29 @@ $("panel").addEventListener("change",function(e){
   else if(ds.amt){pay(B(ds.amt),ds.m).amount=Math.max(0,parseFloat(t.value)||0);render()}
   else if(ds.paid){var p=pay(B(ds.paid),ds.m);p.paid=t.checked;p.paidAt=t.checked?iso(0):"";render()}
   else if(t.id==="tpl"){S.template=t.value}
+  else if(t.id==="restore-file"&&t.files&&t.files[0]){
+    var f=t.files[0], rd=new FileReader();
+    rd.onload=function(){
+      try{
+        var d=JSON.parse(rd.result), arr=function(x){return Array.isArray(x)};
+        if(!d||!arr(d.authors)||!arr(d.marketers)||!arr(d.books))throw 0;
+        if(!d.marketers.every(function(m){return m&&m.id&&m.name&&/^[A-Z0-9]{6}$/.test(m.code||"")&&arr(m.accounts||[])}))throw 0;
+        if(!d.books.every(function(b){return b&&b.id&&arr(b.mk)}))throw 0;
+        d.links=arr(d.links)?d.links:[];
+        d.marketers.forEach(function(m){m.accounts=m.accounts||[]});
+        UI.restore={d:d,when:d.exportedAt?day(String(d.exportedAt).slice(0,10)):f.name};render();
+      }catch(e){toast("هذا الملف ليس نسخة احتياطية من اللوحة.")}
+    };
+    rd.readAsText(f);
+  }
 });
 $("panel").addEventListener("click",function(e){
   var t=e.target.closest("[data-act]"); if(!t)return;
   var a=t.dataset.act, i=t.dataset.id;
-  if(a==="del"){S.links=S.links.filter(function(l){return l.id!==i});render()}
+  if(a==="del"){
+    if(t.dataset.confirm!=="1"){t.dataset.confirm="1";t.classList.add("armed");t.title=t.ariaLabel="اضغطي مرة ثانية للحذف";toast("اضغطي السلة مرة ثانية لحذف الرابط.");
+      setTimeout(function(){if(t.isConnected){t.dataset.confirm="";t.classList.remove("armed");t.title=t.ariaLabel="حذف الرابط"}},4000);return}
+    S.links=S.links.filter(function(l){return l.id!==i});toast("حُذف الرابط.");render()}
   else if(a==="toggle"){var m=M(i);m.active=!m.active;render()}
   else if(a==="m-arch"){var am=M(i);am.archived=!am.archived;if(am.archived)am.active=false;toast(am.archived?"نُقل للأرشيف وأُوقف رمزه.":"رجع من الأرشيف. فعّليه ليشتغل رمزه.");render()}
   else if(a==="show-arch-m"){UI.showArchM=!UI.showArchM;render()}
@@ -514,6 +542,15 @@ $("panel").addEventListener("click",function(e){
   else if(a==="color"){T.color=t.dataset.color;applyTheme();saveTheme()}
   else if(a==="mode"){T.mode=root.getAttribute("data-mode")==="dark"?"light":"dark";applyTheme();saveTheme()}
   else if(a==="backup"){backup()}
+  else if(a==="restore-pick"){$("restore-file").value="";$("restore-file").click()}
+  else if(a==="restore-cancel"){UI.restore=null;render()}
+  else if(a==="restore-go"){
+    var d=UI.restore.d;UI.restore=null;
+    backup();
+    S.authors=d.authors;S.marketers=d.marketers;S.books=d.books;S.template=d.template||DEFAULT_TPL;
+    S.links=d.links.filter(function(l){return l&&l.id&&l.url}).map(function(l){return {id:l.id,m:l.m,b:l.b,url:l.url,status:l.status==="sent"?"sent":"pending",at:+l.at||Date.now()}});
+    UI.open={};toast("رجعت البيانات من النسخة الاحتياطية.");render();
+  }
 });
 $("panel").addEventListener("submit",function(e){
   e.preventDefault();
@@ -559,21 +596,42 @@ applyTheme();
 
 /* ---------- sign-in and loading ---------- */
 function gate(html){$("gate").innerHTML=html;$("gate").hidden=false;$("view-manager").hidden=true;$("calc-link").hidden=true}
-function loginForm(msg){
+function loginForm(msg,ok,email){
   gate('<form class="card" id="login" novalidate><h2>دخول المديرة</h2>'+
-    '<label for="lg-email">البريد</label><input id="lg-email" class="ltr" type="email" autocomplete="username">'+
+    '<label for="lg-email">البريد</label><input id="lg-email" class="ltr" type="email" autocomplete="username" value="'+esc(email||"")+'">'+
     '<label for="lg-pass" style="margin-top:8px">كلمة المرور</label><input id="lg-pass" class="ltr" type="password" autocomplete="current-password">'+
-    '<button type="submit" class="primary" id="lg-go">دخول</button>'+(msg?'<div class="msg err">'+esc(msg)+'</div>':'')+'</form>');
+    '<button type="submit" class="primary" id="lg-go">دخول</button>'+
+    '<button type="button" class="small" data-act="forgot" style="margin-top:8px;border:0;background:none;text-decoration:underline">نسيت كلمة المرور؟</button>'+
+    (msg?'<div class="msg '+(ok?"ok":"err")+'">'+esc(msg)+'</div>':'')+'</form>');
 }
 $("gate").addEventListener("submit",function(e){
   e.preventDefault();
   var em=$("lg-email").value.trim(), pw=$("lg-pass").value;
-  if(!em||!pw)return loginForm("اكتبي البريد وكلمة المرور.");
+  if(!em||!pw)return loginForm("اكتبي البريد وكلمة المرور.",false,em);
   $("lg-go").disabled=true;
-  FB.signIn(em,pw).catch(function(){loginForm("البريد أو كلمة المرور غير صحيحة.")});
+  FB.signIn(em,pw).catch(function(){loginForm("البريد أو كلمة المرور غير صحيحة.",false,em)});
 });
-$("gate").addEventListener("click",function(e){if(e.target.closest("[data-act=signout]"))FB.signOut()});
+$("gate").addEventListener("click",function(e){
+  if(e.target.closest("[data-act=signout]"))FB.signOut();
+  if(e.target.closest("[data-act=forgot]")){
+    var em=$("lg-email").value.trim();
+    if(!/^\S+@\S+\.\S+$/.test(em))return loginForm("اكتبي بريدك أولًا، ثم اضغطي «نسيت كلمة المرور؟».",false,em);
+    e.target.disabled=true;
+    FB.resetPassword(em).then(function(){loginForm("إذا كان البريد مسجّلًا، وصلك رابط لتغيير كلمة المرور. شيّكي على البريد المزعج كمان.",true,em)},
+      function(){loginForm("تعذّر الإرسال. تأكدي من البريد وحاولي بعد قليل.",false,em)});
+  }
+});
 var stopLinks=null;
+// لا نعيد رسم اللوحة وأنتِ تكتبين في خانة، حتى لا يضيع ما كتبتِه. نرسمها بعد ما تخرجين من الخانة.
+var waitRender=false;
+function typing(){var el=document.activeElement;return !!(el&&$("panel").contains(el)&&/^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName)&&!el.readOnly&&el.type!=="checkbox")}
+function softRender(){if(typing()){waitRender=true;return}waitRender=false;render()}
+var pressing=false;
+function later(){setTimeout(function(){if(waitRender&&!pressing&&!typing()){waitRender=false;render()}},0)}
+document.addEventListener("pointerdown",function(){pressing=true},true);
+document.addEventListener("pointerup",function(){pressing=false;if(waitRender)later()},true);
+document.addEventListener("pointercancel",function(){pressing=false},true);
+$("panel").addEventListener("focusout",function(){if(waitRender)later()});
 function start(user){
   gate('<p class="empty">جارٍ التحميل…</p>');
   FB.loadAll().then(function(d){
@@ -582,13 +640,14 @@ function start(user){
     if(!d.template)SAVED.template="";
     stopLinks=FB.watchLinks(function(links){
       // لا نفقد تعديلات لم تُحفظ بعد (تم الإرسال، حذف) عند وصول روابط جديدة
-      var loc={}, have={}, gone={};
-      S.links.forEach(function(l){have[l.id]=1;if(l.id in SAVED.links&&SAVED.links[l.id]!==l.status)loc[l.id]=l.status});
+      var loc={}, have={}, gone={}, added=[], inSnap={};
+      links.forEach(function(l){inSnap[l.id]=1});
+      S.links.forEach(function(l){have[l.id]=1;if(!(l.id in SAVED.links)){if(!inSnap[l.id])added.push(l)}else if(SAVED.links[l.id]!==l.status)loc[l.id]=l.status});
       Object.keys(SAVED.links).forEach(function(k){if(!have[k])gone[k]=1});
       SAVED.links={};links.forEach(function(l){SAVED.links[l.id]=l.status});
-      S.links=links.filter(function(l){return !gone[l.id]});
+      S.links=links.filter(function(l){return !gone[l.id]}).concat(added);
       S.links.forEach(function(l){if(l.id in loc)l.status=loc[l.id]});
-      $("gate").hidden=true;$("view-manager").hidden=false;$("calc-link").hidden=false;render();
+      $("gate").hidden=true;$("view-manager").hidden=false;$("calc-link").hidden=false;softRender();
     },function(){toast("انقطع تحديث الروابط. حدّثي الصفحة.")});
   }).catch(function(){
     gate('<div class="card"><h2>هذا الحساب ليس حساب المديرة</h2><p class="hint">تأكدي أن رقم UID في قواعد Firestore هو رقم حسابك.</p><button type="button" class="small" data-act="signout">تسجيل الخروج</button></div>');

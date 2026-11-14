@@ -125,6 +125,14 @@ textarea.out{width:100%;min-height:320px;font:14px/1.7 var(--body);border:1px so
 .empty{color:var(--muted);font-size:14px;padding:14px;text-align:center}
 .topbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}
 a.btn{text-decoration:none;display:inline-block}
+.kpis{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px}
+.acc-on .slip,.acc-on .bar{display:none!important}
+.acc-on .grid{grid-template-columns:1fr}
+.kpi{background:var(--bg);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.kpi span{font-size:12.5px;color:var(--muted)}
+.kpi b{font-family:var(--display);font-size:20px;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.kpi small{font-size:12px;color:var(--muted)}
+.kpi.good b{color:var(--accent)}.kpi.bad b{color:var(--danger)}.kpi.warnk b{color:var(--gold)}
 .gate{position:fixed;inset:0;z-index:20;background:var(--bg);display:grid;place-items:center;padding:16px}
 .gate .card{max-width:380px;text-align:center;align-items:center}
 </style>
@@ -141,6 +149,7 @@ a.btn{text-decoration:none;display:inline-block}
     <button role="tab" data-tab="mk" aria-selected="false">المسوّقون</button>
     <button role="tab" data-tab="agr" aria-selected="false">الاتفاقيات</button>
     <button role="tab" data-tab="set" aria-selected="false">نسبتي والأسعار</button>
+    <button role="tab" data-tab="acc" aria-selected="false">الحسابات</button>
   </nav>
 
   <div class="grid">
@@ -246,6 +255,49 @@ a.btn{text-decoration:none;display:inline-block}
         </div>
       </div>
 
+      <!-- Accounts -->
+      <div class="panel" id="p-acc" hidden>
+        <div class="card">
+          <div class="row" style="justify-content:space-between;align-items:center">
+            <h3>الملخص المالي</h3>
+            <label class="field">الفترة<select id="accPeriod"></select></label>
+          </div>
+          <div class="kpis" id="kpis"></div>
+          <div class="split" id="accSplit"></div>
+          <div id="accWarn"></div>
+        </div>
+
+        <div class="card">
+          <h3>رأس المال</h3>
+          <div class="row">
+            <label class="field">رأس المال (ر.س)<input type="number" id="capital" min="0" step="100"></label>
+            <label class="field">هدف الربح الشهري (ر.س)<input type="number" id="goal" min="0" step="100"></label>
+          </div>
+          <p class="note">رأس المال هو المبلغ اللي بدأتِ فيه. الرصيد = رأس المال + المحصّل من العملاء − المدفوع للمسوّقين والمصمم − نصيبك المسحوب − المصاريف.</p>
+        </div>
+
+        <div class="card">
+          <div class="row" style="justify-content:space-between;align-items:center">
+            <h3>الحملات المُباعة</h3>
+            <button class="btn" id="addDeal" type="button">حفظ العرض الحالي كحملة مُباعة</button>
+          </div>
+          <p class="note">يحفظ الحملة الحالية بسعرها وتوزيعها. اسم العميل يُؤخذ من تبويب «الاتفاقيات». سجّلي المبلغ المستلم، وعلّمي إذا دفعتِ للمسوّقين والمصمم أو سحبتِ نصيبك.</p>
+          <div class="scroll"><table class="tbl cards" id="dealTable"></table></div>
+        </div>
+
+        <div class="card">
+          <h3>المصاريف</h3>
+          <div class="form">
+            <label class="field">البند<input id="exName" placeholder="مثال: اشتراك كانفا"></label>
+            <label class="field">النوع<select id="exCat"><option>اشتراكات وأدوات</option><option>إعلانات الوكالة</option><option>رسوم وتحويلات</option><option>شحن وطباعة</option><option>أخرى</option></select></label>
+            <label class="field">المبلغ (ر.س)<input type="number" id="exAmt" min="0"></label>
+            <label class="field">التاريخ<input type="date" id="exDate"></label>
+          </div>
+          <div><button class="btn" id="addEx" type="button">إضافة مصروف</button></div>
+          <div class="scroll"><table class="tbl cards" id="exTable"></table></div>
+        </div>
+      </div>
+
       <!-- Settings -->
       <div class="panel" id="p-set" hidden>
         <div class="card">
@@ -346,7 +398,8 @@ const today=()=>{const d=new Date();return `${d.getDate()}/${d.getMonth()+1}/${d
 function fresh(){const p=PRESETS.author.find(x=>x.star);const {clip,...q}=p.q;return{
   fees:{...DEFAULT_FEES},custom:[],marketers:[],general:25,myPct:20,mkUp:20,dsPct:10,round:false,dsMode:'pct',dcost:{...DEFAULT_DCOST},
   audience:'author',preset:p.id,qty:q,mq:{general:clip},books:1,ad:0,
-  agr:{weeks:4,deposit:50,revs:2,keep:30}}}
+  agr:{weeks:4,deposit:50,revs:2,keep:30},
+  capital:0,goal:0,deals:[],expenses:[]}}
 let S=fresh();
 try{const s=JSON.parse(localStorage.getItem('bookcalc-v3'));
   if(s)S={...S,...s,fees:{...DEFAULT_FEES,...(s.fees||{})},dcost:{...DEFAULT_DCOST,...(s.dcost||{})},agr:{...S.agr,...(s.agr||{})}};
@@ -574,7 +627,7 @@ function briefShort(){const a=S.agr,{m,n}=briefData();return `هلا ${m.id==='g
 /* ---------- events ---------- */
 document.querySelector('.maintabs').addEventListener('click',e=>{const b=e.target.closest('[data-tab]');if(!b)return;
   document.querySelectorAll('.maintabs button').forEach(x=>x.setAttribute('aria-selected',x===b));
-  ['camp','mk','agr','set'].forEach(t=>$('p-'+t).hidden=t!==b.dataset.tab);});
+  ['camp','mk','agr','set','acc'].forEach(t=>$('p-'+t).hidden=t!==b.dataset.tab);document.body.classList.toggle('acc-on',b.dataset.tab==='acc');if(b.dataset.tab==='acc')renderAcc();});
 function setAud(a){S.audience=a;const p=PRESETS[a].find(x=>x.star)||PRESETS[a][0];applyPreset(p.id);}
 function applyPreset(id){S.preset=id;const p=PRESETS[S.audience].find(x=>x.id===id);
   if(p){const {clip=0,...q}=p.q;S.qty={...q};S.mq={general:clip};}else{S.qty={};S.mq={};}S.books=1;$('books').value=1;all();}
@@ -628,19 +681,107 @@ function copyText(txt,btn,label,fallbackEl){const done=()=>{btn.textContent='ت�
 $('copyOut').onclick=()=>copyText($('out').value,$('copyOut'),'نسخ النص',$('out'));
 $('copy').onclick=()=>{show('عرض السعر',quoteText());copyText(quoteText(),$('copy'),'نسخ العرض لإرساله للعميل',null);};
 
-$('doBackup').onclick=()=>{const {marketers,custom,fees,general,myPct,mkUp,dsPct,round,dsMode,dcost,agr,ad}=S;
-  const txt=JSON.stringify({v:3,marketers,custom,fees,general,myPct,mkUp,dsPct,round,dsMode,dcost,ad,agr:{myName:agr.myName,freelance:agr.freelance,phone:agr.phone}});
+/* ---------- accounts ---------- */
+const isoDay=(d=new Date())=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+const monthName=new Intl.DateTimeFormat('ar-SA-u-ca-gregory-nu-latn',{month:'long',year:'numeric'});
+let accP='all';
+const inP=d=>accP==='all'||(d||'').slice(0,7)===accP;
+const rs=n=>`${fmt(n)} ر.س`;
+function accData(all){
+  const ds=(S.deals||[]).filter(d=>all||inP(d.date)),xs=(S.expenses||[]).filter(x=>all||inP(x.date));
+  const sum=(a,f)=>a.reduce((t,x)=>t+num(f(x)),0);
+  const rev=sum(ds,d=>d.price),got=sum(ds,d=>Math.min(num(d.got),num(d.price))),cost=sum(ds,d=>num(d.mk)+num(d.des)),
+    me=sum(ds,d=>d.me),ex=sum(xs,x=>x.amount);
+  const profit=rev-cost-ex;
+  return{n:ds.length,rev,got,due:rev-got,cost,me,ex,profit,fund:profit-me,
+    owe:sum(ds,d=>d.costsPaid?0:num(d.mk)+num(d.des)),meOwed:sum(ds,d=>d.meTaken?0:d.me),
+    paidOut:sum(ds,d=>d.costsPaid?num(d.mk)+num(d.des):0),meTaken:sum(ds,d=>d.meTaken?d.me:0)};
+}
+function renderAcc(){
+  const months=[...new Set([isoDay().slice(0,7),...(S.deals||[]).map(d=>(d.date||'').slice(0,7)),...(S.expenses||[]).map(x=>(x.date||'').slice(0,7))].filter(Boolean))].sort().reverse();
+  if(accP!=='all'&&!months.includes(accP))accP='all';
+  $('accPeriod').innerHTML=`<option value="all">كل الفترات</option>`+months.map(m=>`<option value="${m}"${m===accP?' selected':''}>${monthName.format(new Date(m+'-15'))}</option>`).join('');
+  $('accPeriod').value=accP;
+  $('capital').value=S.capital||'';$('goal').value=S.goal||'';
+  if(!$('exDate').value)$('exDate').value=isoDay();
+  const a=accData(false),t=accData(true);
+  const cash=num(S.capital)+t.got-t.paidOut-t.meTaken-t.ex;
+  const margin=a.rev?Math.round(a.profit/a.rev*100):0;
+  const roi=num(S.capital)?Math.round(t.profit/num(S.capital)*100):null;
+  const tile=(l,v,cls='',sub='')=>`<div class="kpi ${cls}"><span>${l}</span><b>${v}</b>${sub?`<small>${sub}</small>`:''}</div>`;
+  $('kpis').innerHTML=
+    tile('الإيرادات',rs(a.rev),'',`${fmt(a.n)} حملة${a.n?` · متوسط ${rs(a.rev/a.n)}`:''}`)+
+    tile('صافي الربح',rs(a.profit),a.profit<0?'bad':'good',`هامش ${margin}%`)+
+    tile('الرصيد الحالي',rs(cash),cash<0?'bad':'',`رأس المال ${rs(S.capital)}`)+
+    tile('عائد رأس المال',roi==null?'—':roi+'%','',roi==null?'أدخلي رأس المال':'من بداية العمل')+
+    tile('على العملاء',rs(a.due),a.due?'warnk':'','لم يُستلم بعد')+
+    tile('للمسوّقين والمصمم',rs(a.owe),a.owe?'warnk':'','لم يُدفع بعد')+
+    tile('نصيبك',rs(a.me),'',a.meOwed?`باقي لك ${rs(a.meOwed)}`:'مسحوب كاملًا')+
+    tile('صندوق الوكالة',rs(a.fund),a.fund<0?'bad':'','بعد نصيبك والمصاريف');
+  const hr='style="border-top:1px solid var(--line);padding-top:6px"';
+  $('accSplit').innerHTML=
+    `<div><span>الإيرادات</span><b>${rs(a.rev)}</b></div>`+
+    `<div class="sub"><span>المحصّل من العملاء</span><span>${fmt(a.got)}</span></div>`+
+    `<div><span>− تكلفة المسوّقين والمصمم</span><b>${rs(a.cost)}</b></div>`+
+    `<div ${hr}><span>إجمالي الربح</span><b>${rs(a.rev-a.cost)}</b></div>`+
+    `<div><span>− المصاريف</span><b>${rs(a.ex)}</b></div>`+
+    `<div ${hr}><span><b>صافي الربح</b></span><b>${rs(a.profit)}</b></div>`+
+    `<div><span>− نصيبك</span><b>${rs(a.me)}</b></div>`+
+    `<div ${hr}><span>يبقى في صندوق الوكالة</span><b>${rs(a.fund)}</b></div>`;
+  const w=[];
+  if(cash<0)w.push('الرصيد بالسالب: المدفوع أكثر من المستلم ورأس المال.');
+  if(accP!=='all'&&num(S.goal)){const p=Math.round(a.profit/num(S.goal)*100);w.push(`هدف الشهر: ${p}% (${rs(a.profit)} من ${rs(S.goal)}).`)}
+  if(a.n&&margin<15)w.push('هامش الربح أقل من 15%: راجعي الأسعار أو النسب.');
+  $('accWarn').innerHTML=w.map(x=>`<div class="warn" style="margin-top:8px">${esc(x)}</div>`).join('');
+  const ds=(S.deals||[]).filter(d=>inP(d.date)).sort((x,y)=>(y.date||'').localeCompare(x.date||''));
+  $('dealTable').innerHTML=ds.length?`<thead><tr><th>التاريخ</th><th>العميل</th><th>الحملة</th><th>السعر</th><th>المستلم</th><th>الربح</th><th>دُفع للمسوّقين والمصمم</th><th>سحبتِ نصيبك</th><th></th></tr></thead><tbody>`+
+    ds.map(d=>`<tr><td data-l="التاريخ"><input type="date" value="${esc(d.date)}" data-dl="${d.id}" data-f="date"></td>
+      <td data-l="العميل"><input value="${esc(d.client)}" data-dl="${d.id}" data-f="client" placeholder="اسم العميل"></td>
+      <td data-l="الحملة">${esc(d.title)}</td>
+      <td data-l="السعر"><input type="number" min="0" value="${num(d.price)}" data-dl="${d.id}" data-f="price"></td>
+      <td data-l="المستلم"><input type="number" min="0" value="${num(d.got)}" data-dl="${d.id}" data-f="got"></td>
+      <td data-l="الربح">${fmt(num(d.price)-num(d.mk)-num(d.des))}<small class="note" style="display:block">نصيبك ${fmt(d.me)}</small></td>
+      <td data-l="للمسوّقين والمصمم"><label class="unit"><input type="checkbox" style="width:auto;min-width:0" data-dl="${d.id}" data-f="costsPaid"${d.costsPaid?' checked':''}> ${fmt(num(d.mk)+num(d.des))}</label></td>
+      <td data-l="نصيبك"><label class="unit"><input type="checkbox" style="width:auto;min-width:0" data-dl="${d.id}" data-f="meTaken"${d.meTaken?' checked':''}> ${fmt(d.me)}</label></td>
+      <td><button class="x" type="button" data-deldeal="${d.id}">حذف</button></td></tr>`).join('')+'</tbody>'
+    :`<tbody><tr><td class="empty">لا توجد حملات مُباعة${accP==='all'?'':' في هذا الشهر'}.</td></tr></tbody>`;
+  const xs=(S.expenses||[]).filter(x=>inP(x.date)).sort((x,y)=>(y.date||'').localeCompare(x.date||''));
+  $('exTable').innerHTML=xs.length?`<thead><tr><th>التاريخ</th><th>البند</th><th>النوع</th><th>المبلغ</th><th></th></tr></thead><tbody>`+
+    xs.map(x=>`<tr><td data-l="التاريخ">${esc(x.date)}</td><td data-l="البند">${esc(x.name)}</td><td data-l="النوع">${esc(x.cat)}</td><td data-l="المبلغ">${rs(x.amount)}</td><td><button class="x" type="button" data-delex="${x.id}">حذف</button></td></tr>`).join('')+'</tbody>'
+    :`<tbody><tr><td class="empty">لا توجد مصاريف${accP==='all'?'':' في هذا الشهر'}.</td></tr></tbody>`;
+}
+$('accPeriod').onchange=e=>{accP=e.target.value;renderAcc();};
+$('capital').onchange=e=>{S.capital=num(e.target.value);save();renderAcc();};
+$('goal').onchange=e=>{S.goal=num(e.target.value);save();renderAcc();};
+$('addDeal').onclick=()=>{const r=calc(S.qty,S.mq,S.books);if(!r.price){alert('العرض الحالي سعره صفر. اختاري الحملة من تبويب «الحملة» أولًا.');return;}
+  S.deals=S.deals||[];S.deals.push({id:'d'+Date.now(),date:isoDay(),client:S.agr.client||'',title:title()+(r.books>1?` × ${r.books}`:''),
+    price:r.price,mk:Math.round(r.mk),des:Math.round(r.des),me:Math.round(r.me),got:0,costsPaid:false,meTaken:false});
+  accP='all';save();renderAcc();};
+$('dealTable').addEventListener('change',e=>{const t=e.target,d=(S.deals||[]).find(x=>x.id===t.dataset.dl);if(!d)return;const f=t.dataset.f;
+  d[f]=t.type==='checkbox'?t.checked:(f==='price'||f==='got')?num(t.value):t.value;save();renderAcc();});
+$('dealTable').addEventListener('click',e=>{const b=e.target.closest('[data-deldeal]');if(!b)return;
+  if(b.dataset.confirm!=='1'){b.dataset.confirm='1';b.textContent='تأكيد الحذف';return;}
+  S.deals=S.deals.filter(d=>d.id!==b.dataset.deldeal);save();renderAcc();});
+$('addEx').onclick=()=>{const n=$('exName').value.trim(),amt=num($('exAmt').value);if(!n||!amt){(n?$('exAmt'):$('exName')).focus();return;}
+  S.expenses=S.expenses||[];S.expenses.push({id:'e'+Date.now(),name:n,cat:$('exCat').value,amount:amt,date:$('exDate').value||isoDay()});
+  $('exName').value='';$('exAmt').value='';save();renderAcc();};
+$('exTable').addEventListener('click',e=>{const b=e.target.closest('[data-delex]');if(!b)return;
+  if(b.dataset.confirm!=='1'){b.dataset.confirm='1';b.textContent='تأكيد الحذف';return;}
+  S.expenses=S.expenses.filter(x=>x.id!==b.dataset.delex);save();renderAcc();});
+
+$('doBackup').onclick=()=>{const {marketers,custom,fees,general,myPct,mkUp,dsPct,round,dsMode,dcost,agr,ad,capital,goal,deals,expenses}=S;
+  const txt=JSON.stringify({v:3,marketers,custom,fees,general,myPct,mkUp,dsPct,round,dsMode,dcost,ad,capital,goal,deals,expenses,agr:{myName:agr.myName,freelance:agr.freelance,phone:agr.phone}});
   $('backup').value=txt;copyText(txt,$('doBackup'),'نسخ النسخة الاحتياطية',$('backup'));$('backupMsg').textContent='';};
 $('doRestore').onclick=()=>{try{const d=JSON.parse($('backup').value);if(!d||!Array.isArray(d.marketers))throw 0;
   S.marketers=d.marketers;S.custom=d.custom||[];S.fees={...DEFAULT_FEES,...(d.fees||{})};
-  ['general','myPct','mkUp','dsPct','round','dsMode','dcost','ad'].forEach(k=>{if(d[k]!=null)S[k]=d[k]});$('adbudget').value=S.ad;S.agr={...S.agr,...(d.agr||{})};
-  renderAgr();all();$('backupMsg').textContent=`تم استرجاع ${d.marketers.length} مسوّق.`;}
+  ['general','myPct','mkUp','dsPct','round','dsMode','dcost','ad','capital','goal','deals','expenses'].forEach(k=>{if(d[k]!=null)S[k]=d[k]});$('adbudget').value=S.ad;S.agr={...S.agr,...(d.agr||{})};
+  renderAgr();all();renderAcc();$('backupMsg').textContent=`تم استرجاع ${d.marketers.length} مسوّق.`;}
   catch(e){$('backupMsg').textContent='النص غير صحيح. تأكدي أنك ألصقتِ النسخة الاحتياطية كاملة.';}};
 $('books').value=S.books;$('adbudget').value=S.ad;renderAgr();all();
 // تحميل البيانات من قاعدة البيانات (يستدعيه js/calc-cloud.js)
 window.calcState=()=>S;
 window.calcLoad=s=>{S={...fresh(),...s,fees:{...DEFAULT_FEES,...(s.fees||{})},dcost:{...DEFAULT_DCOST,...(s.dcost||{})},agr:{...fresh().agr,...(s.agr||{})}};
-  $('books').value=S.books;$('adbudget').value=S.ad;renderAgr();all();};
+  $('books').value=S.books;$('adbudget').value=S.ad;renderAgr();all();renderAcc();};
 </script>
 <div id="gate" class="gate" hidden><div class="card"><h3>الحاسبة للمديرة فقط</h3><p class="note" id="gateMsg">سجّلي الدخول من لوحة التحكم أولًا، ثم ارجعي هنا.</p><a class="btn" href="admin.html">لوحة التحكم</a></div></div>
 <script src="js/config.js"></script>

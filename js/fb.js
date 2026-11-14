@@ -1,6 +1,6 @@
 // الوسيط بين الصفحات و Firebase. الصفحتان تستخدمان window.FB فقط.
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js";
-import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js";
+import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js";
 import { getFirestore, collection, doc, getDoc, getDocs, addDoc, onSnapshot, writeBatch, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js";
 
 const cfg = window.FIREBASE_CONFIG || {};
@@ -24,6 +24,7 @@ window.FB = {
   onAuth: cb => onAuthStateChanged(auth, cb),
   signIn: (email, password) => signInWithEmailAndPassword(auth, email, password),
   signOut: () => signOut(auth),
+  resetPassword: email => { auth.languageCode = "ar"; return sendPasswordResetEmail(auth, email); },
 
   async loadAll() {
     const [authors, marketers, books, settings, codeSnap] = await Promise.all([
