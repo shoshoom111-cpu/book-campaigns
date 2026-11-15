@@ -193,3 +193,8 @@ button.recrow.link{border:1px solid var(--line);padding:3px 10px;gap:10px}
 .gate button{margin-top:6px}
 .guide{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:6px}
 .guide li{display:flex;gap:8px;align-items:center}
+/* requests from the agency site */
+.kv{display:grid;grid-template-columns:8rem 1fr;gap:4px 12px;margin:6px 0 12px}
+.kv dt{color:var(--muted);font-size:.84rem}
+.kv dd{margin:0;white-space:pre-wrap;overflow-wrap:anywhere}
+@media (max-width:520px){.kv{grid-template-columns:1fr}.kv dt{margin-top:6px}}

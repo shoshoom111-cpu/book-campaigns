@@ -1,7 +1,7 @@
 // الوسيط بين الصفحات و Firebase. الصفحتان تستخدمان window.FB فقط.
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js";
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js";
-import { getFirestore, collection, doc, getDoc, getDocs, addDoc, onSnapshot, writeBatch, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js";
+import { getFirestore, collection, doc, getDoc, getDocs, addDoc, onSnapshot, writeBatch, serverTimestamp, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js";
 
 const cfg = window.FIREBASE_CONFIG || {};
 const ok = !!cfg.projectId && !/ضعي/.test(cfg.projectId + cfg.apiKey);
@@ -57,6 +57,18 @@ window.FB = {
       await batch.commit();
     }
   },
+
+  // ----- طلبات موقع الوكالة (requests: خدمة، joinRequests: انضمام مسوق) -----
+  watchReq(name, cb, onError) {
+    return onSnapshot(collection(db, name), snap => {
+      cb(snap.docs.map(d => {
+        const x = d.data({ serverTimestamps: "estimate" });
+        return Object.assign({}, x, { id: d.id, at: x.createdAt && x.createdAt.toMillis ? x.createdAt.toMillis() : Date.now() });
+      }).sort((a, b) => b.at - a.at));
+    }, onError);
+  },
+  setReq: (name, id, data) => updateDoc(doc(db, name, id), Object.assign({}, data, { handledAt: serverTimestamp() })),
+  delReq: (name, id) => deleteDoc(doc(db, name, id)),
 
   // ----- المسوق (بدون حساب) -----
   async getCode(code) {

@@ -182,8 +182,85 @@ function remind(b,m){
   return "أهلًا "+m.name+"،\nتذكير بنشر كتاب «"+b.title+"». المطلوب "+nPosts(b.target||1)+" ووصلنا "+count(b.id,m.id,"")+"."+(b.end?"\nتنتهي الحملة "+day(b.end)+".":"")+"\nشكرًا لك.";
 }
 
+/* ---------- requests from the agency site ---------- */
+var R={svc:[],join:[]}, RQ_LOADED=false, stopReqs=[];
+var RSTATE={new:["wait","جديد"],approved:["good","مقبول"],rejected:["bad","مرفوض"]};
+function newReqs(){return R.svc.filter(function(r){return r.state==="new"}).length+R.join.filter(function(r){return r.state==="new"}).length}
+function reqSummary(){
+  var a=R.svc.filter(function(r){return r.state==="new"}).length, b=R.join.filter(function(r){return r.state==="new"}).length;
+  return [a?a+" طلب خدمة":"", b?b+" طلب انضمام مسوق":""].filter(Boolean).join(" · ");
+}
+var rdf=new Intl.DateTimeFormat("ar-SA-u-ca-gregory-nu-latn",{day:"numeric",month:"short",hour:"numeric",minute:"2-digit"});
+function kv(rows){return '<dl class="kv">'+rows.filter(function(x){return x[1]!==undefined&&x[1]!==null&&String(x[1]).trim()!==""}).map(function(x){return '<dt>'+x[0]+'</dt><dd>'+esc(x[1])+'</dd>'}).join("")+'</dl>'}
+function rpill(st){var x=RSTATE[st]||["plain",st||"—"];return '<span class="pill '+x[0]+'">'+x[1]+'</span>'}
+function svcCard(r){
+  var sum='<span class="s-name">'+esc(r.name)+'<small>«'+esc(r.book)+'» · '+esc(r.who||"")+'</small></span><span class="s-meta">'+rpill(r.state)+'<span class="hint">'+rdf.format(r.at)+'</span></span>';
+  var body=kv([["الصفة",r.who],["الجوال",r.phone],["البريد",r.email],["الكتاب",r.book],["النوع",r.genre],["حالة الكتاب",r.status],["الموعد المهم",r.date],["يُباع في",r.where],["رابط",r.link],
+    ["الخدمات",(r.picks||[]).join("، ")],["الحملة الجاهزة",r.pkg],["الميزانية",r.budget],["تفاصيل",r.notes]]);
+  var hi="السلام عليكم "+r.name+"،\nوصلنا طلبك لكتاب «"+r.book+"» من موقع وكالة ورق.";
+  var acts='<div class="acts">'+(r.phone?walink(wa(r.phone,hi),"مراسلة بالواتساب","واتساب"):'');
+  if(r.state==="new")acts+='<button type="button" class="small primary" data-act="rq-ok" data-id="'+r.id+'">'+ico("check")+'موافقة</button>'+
+    '<button type="button" class="small danger" data-act="rq-no" data-id="'+r.id+'">رفض</button>';
+  else{
+    if(r.state==="approved"&&r.bookId&&B(r.bookId))acts+='<button type="button" class="small" data-act="file" data-id="'+r.bookId+'">'+ico("book")+'فتح الكتاب</button>';
+    acts+='<button type="button" class="small danger" data-act="rq-del" data-id="'+r.id+'">'+ico("trash")+'حذف</button>';
+  }
+  acts+='</div>';
+  if(r.state==="new")acts+='<p class="hint">الموافقة تضيف '+(r.who==="دار نشر"?"الدار":"الكاتب")+' في «الكتّاب» والكتاب في «الكتب» كحملة جديدة تكلّفين لها المسوقين.</p>';
+  return det("rq"+r.id,sum,body+acts);
+}
+function joinCard(r){
+  var sum='<span class="s-name">'+esc(r.name)+'<small class="ltr">'+esc(r.handle)+'</small></span><span class="s-meta">'+rpill(r.state)+'<span class="hint">'+rdf.format(r.at)+'</span></span>';
+  var body=kv([["الحساب",r.handle],["الجوال",r.phone],["المنصات",(r.platforms||[]).join("، ")],["نوع الكتب",r.genre],["متوسط المشاهدات",r.views],["السعر للمقطع",r.price?r.price+" ريال":""],["رخصة موثوق",r.license]]);
+  var acts='<div class="acts">'+(r.phone?walink(wa(r.phone,"أهلًا "+r.name+"،\nوصلنا طلب انضمامك لشبكة مسوقي وكالة ورق."),"مراسلة بالواتساب","واتساب"):'');
+  if(r.state==="new")acts+='<button type="button" class="small primary" data-act="jq-ok" data-id="'+r.id+'">'+ico("check")+'موافقة</button>'+
+    '<button type="button" class="small danger" data-act="jq-no" data-id="'+r.id+'">رفض</button>';
+  else{
+    if(r.state==="approved"&&r.marketerId&&M(r.marketerId))acts+='<button type="button" class="small" data-act="goto" data-tab="marketers">'+ico("users")+'المسوقون</button>';
+    acts+='<button type="button" class="small danger" data-act="jq-del" data-id="'+r.id+'">'+ico("trash")+'حذف</button>';
+  }
+  acts+='</div>';
+  if(r.state==="new")acts+='<p class="hint">الموافقة تضيفه في «المسوقون» مع حساباته ورمز دخول جديد.</p>';
+  return det("jq"+r.id,sum,body+acts);
+}
+function pRequests(){
+  if(!RQ_LOADED)return '<p class="empty">جارٍ تحميل الطلبات…</p>';
+  var ns=R.svc.filter(function(r){return r.state==="new"}), nj=R.join.filter(function(r){return r.state==="new"});
+  var old=R.svc.filter(function(r){return r.state!=="new"}).map(function(r){return {r:r,k:"s"}}).concat(R.join.filter(function(r){return r.state!=="new"}).map(function(r){return {r:r,k:"j"}})).sort(function(a,b){return b.r.at-a.r.at});
+  var h='<section class="sec"><h2>'+ico("book")+'طلبات خدمة جديدة</h2>'+(ns.length?'<div class="files">'+ns.map(svcCard).join("")+'</div>':'<p class="empty">'+ico("check")+'لا توجد طلبات خدمة جديدة.</p>')+'</section>';
+  h+='<section class="sec"><h2>'+ico("users")+'طلبات انضمام مسوقين</h2>'+(nj.length?'<div class="files">'+nj.map(joinCard).join("")+'</div>':'<p class="empty">'+ico("check")+'لا توجد طلبات انضمام جديدة.</p>')+'</section>';
+  if(old.length)h+='<section class="sec">'+det("rq-old",'<span class="s-name">الطلبات السابقة</span><span class="s-meta"><span class="pill plain">'+old.length+'</span></span>',
+    '<div class="files">'+old.map(function(x){return x.k==="s"?svcCard(x.r):joinCard(x.r)}).join("")+'</div>',"sub tool")+'</section>';
+  return h;
+}
+function RS(i){return R.svc.find(function(x){return x.id===i})}
+function RJ(i){return R.join.find(function(x){return x.id===i})}
+function reqDone(p,ok){p.then(function(){toast(ok)},function(){toast("تعذّر تحديث الطلب. تأكدي من الاتصال وحاولي مرة ثانية.")})}
+function approveSvc(r){
+  var nm=r.name.trim(), au=S.authors.find(function(a){return a.name.trim()===nm});
+  if(!au){au={id:id(),name:nm,phone:r.phone||""};S.authors.push(au)}
+  else if(!au.phone&&r.phone)au.phone=r.phone;
+  var bk=S.books.find(function(b){return b.authorId===au.id&&b.title.trim()===r.book.trim()&&!b.archived});
+  if(!bk){bk={id:id(),title:r.book.trim(),authorId:au.id,start:iso(0),end:iso(30),target:1,mk:[],archived:false,reportSent:false,pay:{}};S.books.unshift(bk)}
+  r.state="approved";r.bookId=bk.id;
+  reqDone(FB.setReq("requests",r.id,{state:"approved",bookId:bk.id}),"قُبل الطلب وأُضيف «"+bk.title+"» في الكتب. كلّفي المسوقين.");
+  UI.tab="books";UI.open[bk.id]=true;render();
+}
+function approveJoin(r){
+  var h=String(r.handle||"").trim(), ex=S.marketers.find(function(m){return m.name.trim()===r.name.trim()});
+  var notes=["انضم عبر موقع الوكالة.",r.genre?"نوع الكتب: "+r.genre:"",r.views?"متوسط المشاهدات: "+r.views:"",r.price?"السعر للمقطع: "+r.price+" ريال":"",r.license?"رخصة موثوق: "+r.license:""].filter(Boolean).join("\n");
+  var m=ex||{id:id(),name:r.name.trim(),phone:r.phone||"",accounts:[],code:newCode(),active:true,address:"",iban:"",notes:""};
+  m.accounts=m.accounts||[];
+  (r.platforms||[]).forEach(function(p){if(PNAMES.indexOf(p)>-1&&!m.accounts.some(function(a){return a.p===p&&clean(a.h)===clean(h)}))m.accounts.push({p:p,h:h})});
+  m.notes=m.notes?m.notes+"\n"+notes:notes;
+  if(!ex)S.marketers.push(m);
+  r.state="approved";r.marketerId=m.id;
+  reqDone(FB.setReq("joinRequests",r.id,{state:"approved",marketerId:m.id}),"قُبل «"+m.name+"» وأُضيف للمسوقين برمز "+m.code+".");
+  UI.tab="marketers";UI.open[m.id]=true;render();
+}
+
 /* ---------- manager ---------- */
-var TABS=[["today","اليوم","today"],["books","الكتب","book"],["marketers","المسوقون","users"],["authors","الكتّاب","pen"],["reports","تقاريري","chart"],["settings","الإعدادات","gear"]];
+var TABS=[["today","اليوم","today"],["requests","الطلبات","bell"],["books","الكتب","book"],["marketers","المسوقون","users"],["authors","الكتّاب","pen"],["reports","تقاريري","chart"],["settings","الإعدادات","gear"]];
 function render(){
   S.books.forEach(function(b){
     if(b.archived||b.autoDone||stage(b)!==2)return;
@@ -191,9 +268,9 @@ function render(){
   });
   var n=S.books.filter(function(b){return count(b.id,"","pending")}).length+dues().length;
   $("tabs").innerHTML=TABS.map(function(t){
-    return '<button type="button" data-tab="'+t[0]+'" id="tab-'+t[0]+'" class="'+(UI.tab===t[0]?"on":"")+'">'+ico(t[2])+'<span>'+t[1]+'</span>'+(t[0]==="today"&&n?'<b class="badge">'+n+'</b>':'')+'</button>';
+    return '<button type="button" data-tab="'+t[0]+'" id="tab-'+t[0]+'" class="'+(UI.tab===t[0]?"on":"")+'">'+ico(t[2])+'<span>'+t[1]+'</span>'+(t[0]==="today"&&n?'<b class="badge">'+n+'</b>':'')+(t[0]==="requests"&&newReqs()?'<b class="badge">'+newReqs()+'</b>':'')+'</button>';
   }).join("");
-  $("panel").innerHTML=({today:pToday,marketers:pMarketers,books:pBooks,authors:pAuthors,reports:pReports,settings:pSettings})[UI.tab]();
+  $("panel").innerHTML=({today:pToday,requests:pRequests,marketers:pMarketers,books:pBooks,authors:pAuthors,reports:pReports,settings:pSettings})[UI.tab]();
   applySearch();
   applyTheme();
   persist();
@@ -278,6 +355,7 @@ function pToday(){
     }).join("")+closing.map(function(b){
       return '<button type="button" class="chip" data-act="file" data-id="'+b.id+'">'+ico("box")+esc(b.title)+'<b>إقفال</b></button>';
     }).join("")+'</div>';
+  if(newReqs())h+='<section class="sec"><div class="rows"><button type="button" class="row go" data-act="goto" data-tab="requests"><span class="meta"><strong>طلبات جديدة من الموقع</strong><small>'+reqSummary()+'</small></span><span class="num">'+newReqs()+'</span>'+ico("next")+'</button></div></section>';
   if(nb.length)h+='<section class="sec"><h2>'+ico("link")+'روابط جديدة</h2><div class="rows">'+nb.map(function(b){
     var odd=S.links.filter(function(l){var c;return l.b===b.id&&l.status==="pending"&&(c=check(l))&&c.c!=="good"}).length;
     return '<button type="button" class="row go" data-act="file" data-id="'+b.id+'"><span class="meta"><strong>'+esc(b.title)+'</strong>'+
@@ -292,7 +370,7 @@ function pToday(){
     [[S.marketers.length,"users","أضيفي المسوقين","marketers"],[S.authors.length,"pen","أضيفي كاتبًا","authors"],[0,"book","أضيفي كتابًا وكلّفي مسوقيه","books"]].map(function(g){
       return '<li><span class="dot '+(g[0]?"good":"wait")+'"></span><button type="button" class="small" data-act="goto" data-tab="'+g[3]+'">'+ico(g[1])+g[2]+'</button></li>';
     }).join("")+'</ol></section>';
-  else if(!nb.length&&!du.length&&!soon.length&&!closing.length)h+='<p class="empty">'+ico("check")+'لا يوجد شيء يحتاجك الآن.</p>';
+  else if(!nb.length&&!du.length&&!soon.length&&!closing.length&&!newReqs())h+='<p class="empty">'+ico("check")+'لا يوجد شيء يحتاجك الآن.</p>';
   return h;
 }
 function isDup(l){var k=norm(l.url);return S.links.some(function(o){return o.id!==l.id&&norm(o.url)===k&&(o.at<l.at||(o.at===l.at&&o.id<l.id))})}
@@ -588,6 +666,15 @@ $("panel").addEventListener("click",function(e){
   else if(a==="copy-entry"){copy(ENTRY_URL,"تم نسخ الرابط.",$("entry-url"))}
   else if(a==="signout"){FB.signOut()}
   else if(a==="goto"){UI.tab=t.dataset.tab;render()}
+  else if(a==="rq-ok"){var rq=RS(i);if(rq&&rq.state==="new")approveSvc(rq)}
+  else if(a==="jq-ok"){var jq=RJ(i);if(jq&&jq.state==="new")approveJoin(jq)}
+  else if(a==="rq-no"||a==="jq-no"){
+    if(!arm(t,"اضغطي «رفض» مرة ثانية للتأكيد."))return;
+    var col=a==="rq-no"?"requests":"joinRequests", rr=a==="rq-no"?RS(i):RJ(i); rr.state="rejected";
+    reqDone(FB.setReq(col,i,{state:"rejected"}),"رُفض الطلب. تقدرين تراسلين صاحبه بالواتساب من الطلبات السابقة.");render()}
+  else if(a==="rq-del"||a==="jq-del"){
+    if(!arm(t,"اضغطي «تأكيد الحذف» لحذف الطلب نهائيًا."))return;
+    reqDone(FB.delReq(a==="rq-del"?"requests":"joinRequests",i),"حُذف الطلب.")}
   else if(a==="color"){T.color=t.dataset.color;applyTheme();saveTheme()}
   else if(a==="mode"){T.mode=root.getAttribute("data-mode")==="dark"?"light":"dark";applyTheme();saveTheme()}
   else if(a==="backup"){backup()}
@@ -698,6 +785,11 @@ function start(user){
       S.links.forEach(function(l){if(l.id in loc)l.status=loc[l.id]});
       $("gate").hidden=true;$("view-manager").hidden=false;$("calc-link").hidden=false;softRender();
     },function(){toast("انقطع تحديث الروابط. حدّثي الصفحة.")});
+    var got={};
+    [["requests","svc"],["joinRequests","join"]].forEach(function(x){
+      stopReqs.push(FB.watchReq(x[0],function(list){R[x[1]]=list;got[x[1]]=1;RQ_LOADED=!!(got.svc&&got.join);if(SAVED)softRender()},
+        function(){got[x[1]]=1;RQ_LOADED=!!(got.svc&&got.join);toast("تعذّر تحميل طلبات الموقع.")}));
+    });
   }).catch(function(){
     gate('<div class="card"><h2>هذا الحساب ليس حساب المديرة</h2><p class="hint">تأكدي أن رقم UID في قواعد Firestore هو رقم حسابك.</p><button type="button" class="small" data-act="signout">تسجيل الخروج</button></div>');
   });
@@ -707,6 +799,7 @@ function boot(){
   if(!FB||!FB.ok){gate('<div class="card"><h2>الإعداد غير مكتمل</h2><p class="hint">ضعي بيانات مشروع Firebase في الملف js/config.js ثم حدّثي الصفحة.</p></div>');return}
   FB.onAuth(function(u){
     if(stopLinks){stopLinks();stopLinks=null}
+    stopReqs.forEach(function(f){f()});stopReqs=[];R={svc:[],join:[]};RQ_LOADED=false;
     SAVED=null;
     if(u)start(u); else loginForm("");
   });
