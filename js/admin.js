@@ -196,7 +196,7 @@ function rpill(st){var x=RSTATE[st]||["plain",st||"—"];return '<span class="pi
 function svcCard(r){
   var sum='<span class="s-name">'+esc(r.name)+'<small>«'+esc(r.book)+'» · '+esc(r.who||"")+'</small></span><span class="s-meta">'+rpill(r.state)+'<span class="hint">'+rdf.format(r.at)+'</span></span>';
   var body=kv([["الصفة",r.who],["الجوال",r.phone],["البريد",r.email],["الكتاب",r.book],["النوع",r.genre],["حالة الكتاب",r.status],["الموعد المهم",r.date],["يُباع في",r.where],["رابط",r.link],
-    ["الخدمات",(r.picks||[]).join("، ")],["الحملة الجاهزة",r.pkg],["الميزانية",r.budget],["تفاصيل",r.notes]]);
+    ["الخدمات",(r.picks||[]).join("، ")],["الحملة الجاهزة",r.pkg],["الميزانية",r.budget],["تفاصيل",r.notes],["ملاحظة الوكالة",r.adminNote]]);
   var hi="السلام عليكم "+r.name+"،\nوصلنا طلبك لكتاب «"+r.book+"» من موقع وكالة ورق.";
   var acts='<div class="acts">'+(r.phone?walink(wa(r.phone,hi),"مراسلة بالواتساب","واتساب"):'');
   if(r.state==="new")acts+='<button type="button" class="small primary" data-act="rq-ok" data-id="'+r.id+'">'+ico("check")+'موافقة</button>'+
@@ -211,7 +211,7 @@ function svcCard(r){
 }
 function joinCard(r){
   var sum='<span class="s-name">'+esc(r.name)+'<small class="ltr">'+esc(r.handle)+'</small></span><span class="s-meta">'+rpill(r.state)+'<span class="hint">'+rdf.format(r.at)+'</span></span>';
-  var body=kv([["الحساب",r.handle],["الجوال",r.phone],["المنصات",(r.platforms||[]).join("، ")],["نوع الكتب",r.genre],["متوسط المشاهدات",r.views],["السعر للمقطع",r.price?r.price+" ريال":""],["رخصة موثوق",r.license]]);
+  var body=kv([["الحساب",r.handle],["الجوال",r.phone],["المنصات",(r.platforms||[]).join("، ")],["نوع الكتب",r.genre],["متوسط المشاهدات",r.views],["السعر للمقطع",r.price?r.price+" ريال":""],["رخصة موثوق",r.license],["ملاحظة الوكالة",r.adminNote]]);
   var acts='<div class="acts">'+(r.phone?walink(wa(r.phone,"أهلًا "+r.name+"،\nوصلنا طلب انضمامك لشبكة مسوقي وكالة ورق."),"مراسلة بالواتساب","واتساب"):'');
   if(r.state==="new")acts+='<button type="button" class="small primary" data-act="jq-ok" data-id="'+r.id+'">'+ico("check")+'موافقة</button>'+
     '<button type="button" class="small danger" data-act="jq-no" data-id="'+r.id+'">رفض</button>';
