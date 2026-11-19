@@ -194,10 +194,10 @@ var rdf=new Intl.DateTimeFormat("ar-SA-u-ca-gregory-nu-latn",{day:"numeric",mont
 function kv(rows){return '<dl class="kv">'+rows.filter(function(x){return x[1]!==undefined&&x[1]!==null&&String(x[1]).trim()!==""}).map(function(x){return '<dt>'+x[0]+'</dt><dd>'+esc(x[1])+'</dd>'}).join("")+'</dl>'}
 function rpill(st){var x=RSTATE[st]||["plain",st||"—"];return '<span class="pill '+x[0]+'">'+x[1]+'</span>'}
 function svcCard(r){
-  var sum='<span class="s-name">'+esc(r.name)+'<small>«'+esc(r.book)+'» · '+esc(r.who||"")+'</small></span><span class="s-meta">'+rpill(r.state)+'<span class="hint">'+rdf.format(r.at)+'</span></span>';
+  var sum='<span class="s-name">'+esc(r.name)+'<small>'+(r.book?'«'+esc(r.book)+'» · ':'')+esc(r.who||"")+'</small></span><span class="s-meta">'+rpill(r.state)+'<span class="hint">'+rdf.format(r.at)+'</span></span>';
   var body=kv([["الصفة",r.who],["الجوال",r.phone],["البريد",r.email],["الكتاب",r.book],["النوع",r.genre],["حالة الكتاب",r.status],["الموعد المهم",r.date],["يُباع في",r.where],["رابط",r.link],
-    ["الخدمات",(r.picks||[]).join("، ")],["الحملة الجاهزة",r.pkg],["الميزانية",r.budget],["تفاصيل",r.notes],["ملاحظة الوكالة",r.adminNote]]);
-  var hi="السلام عليكم "+r.name+"،\nوصلنا طلبك لكتاب «"+r.book+"» من موقع وكالة ورق.";
+    ["الخدمات",(r.picks||[]).join("، ")],["الحملة الجاهزة",r.pkg],["الميزانية",r.budget],["تفاصيل",r.notes]].concat((r.answers||[]).map(function(a){return [a.l,a.v]})).concat([["ملاحظة الوكالة",r.adminNote]]));
+  var hi="السلام عليكم "+r.name+"،\nوصلنا طلبك"+(r.book?" لكتاب «"+r.book+"»":"")+" من موقع وكالة ورق.";
   var acts='<div class="acts">'+(r.phone?walink(wa(r.phone,hi),"مراسلة بالواتساب","واتساب"):'');
   if(r.state==="new")acts+='<button type="button" class="small primary" data-act="rq-ok" data-id="'+r.id+'">'+ico("check")+'موافقة</button>'+
     '<button type="button" class="small danger" data-act="rq-no" data-id="'+r.id+'">رفض</button>';
@@ -240,6 +240,11 @@ function approveSvc(r){
   var nm=r.name.trim(), au=S.authors.find(function(a){return a.name.trim()===nm});
   if(!au){au={id:id(),name:nm,phone:r.phone||""};S.authors.push(au)}
   else if(!au.phone&&r.phone)au.phone=r.phone;
+  if(!String(r.book||"").trim()){
+    r.state="approved";
+    reqDone(FB.setReq("requests",r.id,{state:"approved"}),"قُبل الطلب وأُضيف «"+au.name+"» في الكتّاب. الطلب ما فيه عنوان كتاب، أضيفيه من ملف الكاتب.");
+    UI.tab="authors";UI.open[au.id]=true;render();return;
+  }
   var bk=S.books.find(function(b){return b.authorId===au.id&&b.title.trim()===r.book.trim()&&!b.archived});
   if(!bk){bk={id:id(),title:r.book.trim(),authorId:au.id,start:iso(0),end:iso(30),target:1,mk:[],archived:false,reportSent:false,pay:{}};S.books.unshift(bk)}
   r.state="approved";r.bookId=bk.id;
