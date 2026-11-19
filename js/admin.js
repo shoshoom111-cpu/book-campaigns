@@ -196,7 +196,7 @@ function rpill(st){var x=RSTATE[st]||["plain",st||"—"];return '<span class="pi
 function svcCard(r){
   var sum='<span class="s-name">'+esc(r.name)+'<small>'+(r.book?'«'+esc(r.book)+'» · ':'')+esc(r.who||"")+'</small></span><span class="s-meta">'+rpill(r.state)+'<span class="hint">'+rdf.format(r.at)+'</span></span>';
   var body=kv([["الصفة",r.who],["الجوال",r.phone],["البريد",r.email],["الكتاب",r.book],["النوع",r.genre],["حالة الكتاب",r.status],["الموعد المهم",r.date],["يُباع في",r.where],["رابط",r.link],
-    ["الخدمات",(r.picks||[]).join("، ")],["الحملة الجاهزة",r.pkg],["الميزانية",r.budget],["تفاصيل",r.notes]].concat((r.answers||[]).map(function(a){return [a.l,a.v]})).concat([["ملاحظة الوكالة",r.adminNote]]));
+    ["الخدمات",(r.picks||[]).concat((r.services||[]).map(function(x){return x.s})).join("، ")],["الحملة الجاهزة",r.pkg],["الميزانية",r.budget],["تفاصيل",r.notes]].concat((r.services||[]).filter(function(x){return x.d}).map(function(x){return ["تفاصيل «"+x.s+"»",x.d]})).concat((r.answers||[]).map(function(a){return [a.l,a.v]})).concat([["ملاحظة الوكالة",r.adminNote]]));
   var hi="السلام عليكم "+r.name+"،\nوصلنا طلبك"+(r.book?" لكتاب «"+r.book+"»":"")+" من موقع وكالة ورق.";
   var acts='<div class="acts">'+(r.phone?walink(wa(r.phone,hi),"مراسلة بالواتساب","واتساب"):'');
   if(r.state==="new")acts+='<button type="button" class="small primary" data-act="rq-ok" data-id="'+r.id+'">'+ico("check")+'موافقة</button>'+
