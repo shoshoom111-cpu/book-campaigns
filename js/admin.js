@@ -792,7 +792,7 @@ function start(user){
     },function(){toast("انقطع تحديث الروابط. حدّثي الصفحة.")});
     var got={};
     [["requests","svc"],["joinRequests","join"]].forEach(function(x){
-      stopReqs.push(FB.watchReq(x[0],function(list){R[x[1]]=list;got[x[1]]=1;RQ_LOADED=!!(got.svc&&got.join);if(SAVED)softRender()},
+      stopReqs.push(FB.watchReq(x[0],function(list){R[x[1]]=x[0]==="requests"?list.filter(function(r){return r.dash!==false}):list;got[x[1]]=1;RQ_LOADED=!!(got.svc&&got.join);if(SAVED)softRender()},
         function(){got[x[1]]=1;RQ_LOADED=!!(got.svc&&got.join);toast("تعذّر تحميل طلبات الموقع.")}));
     });
   }).catch(function(){
