@@ -191,7 +191,7 @@ function reqSummary(){
   return [a?a+" طلب خدمة":"", b?b+" طلب انضمام مسوق":""].filter(Boolean).join(" · ");
 }
 var rdf=new Intl.DateTimeFormat("ar-SA-u-ca-gregory-nu-latn",{day:"numeric",month:"short",hour:"numeric",minute:"2-digit"});
-function kv(rows){return '<dl class="kv">'+rows.filter(function(x){return x[1]!==undefined&&x[1]!==null&&String(x[1]).trim()!==""}).map(function(x){return '<dt>'+x[0]+'</dt><dd>'+esc(x[1])+'</dd>'}).join("")+'</dl>'}
+function kv(rows){return '<dl class="kv">'+rows.filter(function(x){return x[1]!==undefined&&x[1]!==null&&String(x[1]).trim()!==""}).map(function(x){return '<dt>'+esc(x[0])+'</dt><dd>'+esc(x[1])+'</dd>'}).join("")+'</dl>'}
 function rpill(st){var x=RSTATE[st]||["plain",st||"—"];return '<span class="pill '+x[0]+'">'+x[1]+'</span>'}
 function svcCard(r){
   var sum='<span class="s-name">'+esc(r.name)+'<small>'+(r.book?'«'+esc(r.book)+'» · ':'')+esc(r.who||"")+'</small></span><span class="s-meta">'+rpill(r.state)+'<span class="hint">'+rdf.format(r.at)+'</span></span>';
@@ -242,13 +242,13 @@ function approveSvc(r){
   else if(!au.phone&&r.phone)au.phone=r.phone;
   if(!String(r.book||"").trim()){
     r.state="approved";
-    reqDone(FB.setReq("requests",r.id,{state:"approved"}),"قُبل الطلب وأُضيف «"+au.name+"» في الكتّاب. الطلب ما فيه عنوان كتاب، أضيفيه من ملف الكاتب.");
+    reqDone(FB.commit([{t:"set",c:"authors",id:au.id,data:JSON.parse(JSON.stringify(au))}]).then(function(){return FB.setReq("requests",r.id,{state:"approved"})}),"قُبل الطلب وأُضيف «"+au.name+"» في الكتّاب. الطلب ما فيه عنوان كتاب، أضيفيه من ملف الكاتب.");
     UI.tab="authors";UI.open[au.id]=true;render();return;
   }
   var bk=S.books.find(function(b){return b.authorId===au.id&&b.title.trim()===r.book.trim()&&!b.archived});
   if(!bk){bk={id:id(),title:r.book.trim(),authorId:au.id,start:iso(0),end:iso(30),target:1,mk:[],archived:false,reportSent:false,pay:{}};S.books.unshift(bk)}
   r.state="approved";r.bookId=bk.id;
-  reqDone(FB.setReq("requests",r.id,{state:"approved",bookId:bk.id}),"قُبل الطلب وأُضيف «"+bk.title+"» في الكتب. كلّفي المسوقين.");
+  reqDone(FB.commit([{t:"set",c:"authors",id:au.id,data:JSON.parse(JSON.stringify(au))},{t:"set",c:"books",id:bk.id,data:JSON.parse(JSON.stringify(bk))}]).then(function(){return FB.setReq("requests",r.id,{state:"approved",bookId:bk.id})}),"قُبل الطلب وأُضيف «"+bk.title+"» في الكتب. كلّفي المسوقين.");
   UI.tab="books";UI.open[bk.id]=true;render();
 }
 function approveJoin(r){
@@ -260,7 +260,7 @@ function approveJoin(r){
   m.notes=m.notes?m.notes+"\n"+notes:notes;
   if(!ex)S.marketers.push(m);
   r.state="approved";r.marketerId=m.id;
-  reqDone(FB.setReq("joinRequests",r.id,{state:"approved",marketerId:m.id}),"قُبل «"+m.name+"» وأُضيف للمسوقين برمز "+m.code+".");
+  reqDone(FB.commit([{t:"set",c:"marketers",id:m.id,data:JSON.parse(JSON.stringify(m))}]).then(function(){return FB.setReq("joinRequests",r.id,{state:"approved",marketerId:m.id})}),"قُبل «"+m.name+"» وأُضيف للمسوقين برمز "+m.code+".");
   UI.tab="marketers";UI.open[m.id]=true;render();
 }
 
@@ -792,7 +792,7 @@ function start(user){
     },function(){toast("انقطع تحديث الروابط. حدّثي الصفحة.")});
     var got={};
     [["requests","svc"],["joinRequests","join"]].forEach(function(x){
-      stopReqs.push(FB.watchReq(x[0],function(list){R[x[1]]=x[0]==="requests"?list.filter(function(r){return r.dash!==false}):list;got[x[1]]=1;RQ_LOADED=!!(got.svc&&got.join);if(SAVED)softRender()},
+      stopReqs.push(FB.watchReq(x[0],function(list){R[x[1]]=x[0]==="requests"?list.filter(function(r){return r.dash===true}):list;got[x[1]]=1;RQ_LOADED=!!(got.svc&&got.join);if(SAVED)softRender()},
         function(){got[x[1]]=1;RQ_LOADED=!!(got.svc&&got.join);toast("تعذّر تحميل طلبات الموقع.")}));
     });
   }).catch(function(){
